@@ -52,6 +52,7 @@ def init_db():
             notional REAL,
             pnl REAL,
             pnl_pct REAL,
+            peak_pnl_pct REAL,
             status TEXT DEFAULT 'open'
         );
 
@@ -64,6 +65,14 @@ def init_db():
             notes TEXT
         );
     """)
+    # Migrate existing DBs — add peak_pnl_pct if it doesn't exist yet
+    try:
+        conn.execute("ALTER TABLE position_log ADD COLUMN peak_pnl_pct REAL")
+        conn.commit()
+        logger.info("Migrated position_log: added peak_pnl_pct column")
+    except Exception:
+        pass  # Column already exists, fine
+
     conn.commit()
     conn.close()
     logger.info(f"Database initialized at {DB_PATH}")
@@ -113,6 +122,33 @@ def close_position_db(symbol, exit_price, pnl, pnl_pct):
         datetime.now(timezone.utc).isoformat(),
         exit_price, pnl, pnl_pct, symbol
     ))
+    conn.commit()
+    conn.close()
+
+
+def get_position_peak(symbol):
+    """Returns the recorded peak P&L fraction for an open position, or None."""
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+        SELECT peak_pnl_pct FROM position_log
+        WHERE symbol = ? AND status = 'open'
+        ORDER BY open_time DESC LIMIT 1
+    """, (symbol,))
+    row = c.fetchone()
+    conn.close()
+    return row["peak_pnl_pct"] if row else None
+
+
+def update_position_peak(symbol, pnl_pct):
+    """Update peak P&L for an open position if the new value is higher."""
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+        UPDATE position_log
+        SET peak_pnl_pct = MAX(COALESCE(peak_pnl_pct, -999), ?)
+        WHERE symbol = ? AND status = 'open'
+    """, (pnl_pct, symbol))
     conn.commit()
     conn.close()
 

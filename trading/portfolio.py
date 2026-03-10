@@ -8,6 +8,7 @@ from config import (
     TRAILING_STOP_PCT, TRAILING_ACTIVATE_PCT
 )
 import alpaca_client as alpaca
+from data.db import get_position_peak, update_position_peak
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +28,14 @@ def get_portfolio_state():
 
     for p in positions:
         asset_class = p.get("asset_class", "us_equity")
+        # Normalize crypto symbols to base form (Alpaca may return "BTC/USD" or "BTCUSD")
+        raw_sym = p["symbol"]
+        if asset_class == "crypto":
+            raw_sym = raw_sym.replace("/USD", "")
+            if raw_sym.endswith("USD") and len(raw_sym) > 3:
+                raw_sym = raw_sym[:-3]
         pos = {
-            "symbol": p["symbol"],
+            "symbol": raw_sym,
             "asset_class": asset_class,
             "qty": float(p["qty"]),
             "avg_entry_price": float(p["avg_entry_price"]),
@@ -70,17 +77,20 @@ def get_portfolio_state():
     }
 
 
-def get_position_size(portfolio_value, asset_class):
+def get_position_size(portfolio_value, asset_class, n_open=1):
     """
     Calculate appropriate position size based on portfolio value and targets.
+    n_open: how many positions of this type will be open after this one (including it).
     Stays within max position size constraint.
     """
+    n = max(1, n_open)
     if asset_class == "crypto":
-        target_pct = TARGET_CRYPTO_PCT / max(1, 1)  # roughly 1 crypto position
+        target_pct = TARGET_CRYPTO_PCT / n
     elif asset_class == "options":
-        target_pct = TARGET_OPTIONS_PCT / max(1, 1)
+        target_pct = TARGET_OPTIONS_PCT / n
     else:
-        target_pct = TARGET_STOCK_PCT / 3  # aim for ~3 stock positions
+        # Target ~3 stock slots; if we already have more, divide accordingly
+        target_pct = TARGET_STOCK_PCT / max(3, n)
 
     # Don't let any single position exceed MAX_POSITION_PCT of portfolio
     target_pct = min(target_pct, MAX_POSITION_PCT)
@@ -111,10 +121,11 @@ def check_needs_rebalance(state):
 
 def check_stop_and_take_profit(state):
     """
-    Check all positions for stop-loss or take-profit triggers.
+    Check all positions for stop-loss, take-profit, or trailing stop triggers.
     Returns list of positions to close with reasons.
     """
     to_close = []
+    close_symbols = set()
 
     for pos in state["all_positions"]:
         pct = pos["unrealized_plpc"]
@@ -127,18 +138,50 @@ def check_stop_and_take_profit(state):
                 "reason": f"STOP-LOSS triggered at {pct*100:.1f}%",
                 "pnl_pct": pct,
             })
-        elif pct >= TAKE_PROFIT_PCT:
+            close_symbols.add(sym)
+            continue
+
+        if pct >= TAKE_PROFIT_PCT:
             to_close.append({
                 "symbol": sym,
                 "asset_class": pos["asset_class"],
                 "reason": f"TAKE-PROFIT triggered at {pct*100:.1f}%",
                 "pnl_pct": pct,
             })
+            close_symbols.add(sym)
+            continue
+
+        # --- Trailing stop ---
+        # Update the stored peak if we're at a new high
+        peak = get_position_peak(sym)
+        if peak is None or pct > peak:
+            update_position_peak(sym, pct)
+            peak = pct
+
+        # Fire trailing stop if peak activated threshold and we've since dropped enough
+        if (peak is not None
+                and peak >= TRAILING_ACTIVATE_PCT
+                and pct <= peak - TRAILING_STOP_PCT):
+            to_close.append({
+                "symbol": sym,
+                "asset_class": pos["asset_class"],
+                "reason": f"TRAILING-STOP: peaked at {peak*100:+.1f}%, now {pct*100:+.1f}%",
+                "pnl_pct": pct,
+            })
+            close_symbols.add(sym)
 
     return to_close
 
 
 def get_symbols_held():
-    """Returns set of symbols currently held."""
+    """Returns set of symbols currently held, with crypto normalized to base form."""
     positions = alpaca.get_positions()
-    return {p["symbol"] for p in positions}
+    held = set()
+    for p in positions:
+        sym = p["symbol"]
+        if p.get("asset_class") == "crypto":
+            sym = sym.replace("/USD", "")
+            if sym.endswith("USD") and len(sym) > 3:
+                sym = sym[:-3]
+        held.add(sym)
+    return held

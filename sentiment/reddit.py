@@ -7,7 +7,7 @@ import requests
 import re
 import logging
 import time
-from config import REDDIT_SUBS, ALL_STOCK_SYMBOLS, ALL_CRYPTO_SYMBOLS, SECTOR_KEYWORDS
+from config import REDDIT_SUBS, ALL_STOCK_SYMBOLS, ALL_CRYPTO_SYMBOLS, SECTOR_KEYWORDS, DOLLAR_SIGN_ONLY_TICKERS
 
 logger = logging.getLogger(__name__)
 
@@ -17,31 +17,54 @@ CRYPTO_SYMBOLS = [s.split("/")[0] for s in ALL_CRYPTO_SYMBOLS]  # BTC, ETH, etc.
 ALL_SYMBOLS = ALL_STOCK_SYMBOLS + CRYPTO_SYMBOLS
 
 
-def fetch_subreddit_posts(subreddit, limit=25, sort="hot"):
-    """Fetch posts from a subreddit using the public JSON API."""
+def fetch_subreddit_posts(subreddit, limit=25, sort="hot", retries=3):
+    """Fetch posts from a subreddit using the public JSON API. Retries on 429/5xx."""
     url = f"https://www.reddit.com/r/{subreddit}/{sort}.json"
     params = {"limit": limit}
-    try:
-        r = requests.get(url, headers=HEADERS, params=params, timeout=10)
-        r.raise_for_status()
-        data = r.json()
-        posts = data.get("data", {}).get("children", [])
-        return [p["data"] for p in posts]
-    except Exception as e:
-        logger.warning(f"Reddit fetch failed for r/{subreddit}: {e}")
-        return []
+    backoff = 2
+    for attempt in range(retries):
+        try:
+            r = requests.get(url, headers=HEADERS, params=params, timeout=10)
+            if r.status_code == 429:
+                wait = backoff ** attempt
+                logger.warning(f"Reddit rate limited on r/{subreddit}, retrying in {wait}s...")
+                time.sleep(wait)
+                continue
+            r.raise_for_status()
+            data = r.json()
+            posts = data.get("data", {}).get("children", [])
+            return [p["data"] for p in posts]
+        except requests.HTTPError as e:
+            if e.response.status_code >= 500:
+                wait = backoff ** attempt
+                logger.warning(f"Reddit 5xx on r/{subreddit} (attempt {attempt+1}), retrying in {wait}s...")
+                time.sleep(wait)
+            else:
+                logger.warning(f"Reddit fetch failed for r/{subreddit}: {e}")
+                return []
+        except Exception as e:
+            logger.warning(f"Reddit fetch failed for r/{subreddit}: {e}")
+            return []
+    logger.warning(f"Reddit: gave up on r/{subreddit} after {retries} attempts")
+    return []
 
 
 def extract_symbol_mentions(text):
-    """Extract stock/crypto ticker mentions from text."""
-    # Match $TICKER or standalone TICKER (2-5 uppercase letters)
-    dollar_tickers = re.findall(r'\$([A-Z]{1,5})\b', text.upper())
-    word_tickers = re.findall(r'\b([A-Z]{2,5})\b', text.upper())
+    """
+    Extract stock/crypto ticker mentions from text.
+    Tickers in DOLLAR_SIGN_ONLY_TICKERS (e.g. AI, LINK, DOT) require an explicit $
+    prefix to avoid false positives from common English words.
+    """
+    upper = text.upper()
+    dollar_tickers = set(re.findall(r'\$([A-Z]{1,5})\b', upper))
+    word_tickers = set(re.findall(r'\b([A-Z]{2,5})\b', upper))
 
-    # Filter to only known symbols
     found = set()
-    for sym in dollar_tickers + word_tickers:
+    for sym in dollar_tickers:
         if sym in ALL_SYMBOLS:
+            found.add(sym)
+    for sym in word_tickers:
+        if sym in ALL_SYMBOLS and sym not in DOLLAR_SIGN_ONLY_TICKERS:
             found.add(sym)
 
     return list(found)

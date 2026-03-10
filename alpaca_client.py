@@ -42,6 +42,18 @@ def _delete(path, base=ALPACA_BASE_URL):
     return r.json()
 
 
+# --- Symbol helpers ---
+
+def to_alpaca_symbol(symbol, asset_class):
+    """
+    Ensure symbol is in Alpaca's expected format for orders/closes.
+    Internally we store crypto as base (BTC), Alpaca wants BTC/USD.
+    """
+    if asset_class == "crypto" and "/" not in symbol:
+        return f"{symbol}/USD"
+    return symbol
+
+
 # --- Account ---
 
 def get_account():

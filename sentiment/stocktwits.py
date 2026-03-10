@@ -2,6 +2,7 @@
 StockTwits sentiment scraper.
 Public API — no auth required for basic symbol streams.
 """
+import html
 import requests
 import logging
 import time
@@ -58,7 +59,7 @@ def parse_sentiment(messages):
 
         body = msg.get("body", "")
         if body:
-            snippets.append(body[:200])
+            snippets.append(html.unescape(body[:200]))
 
     total = bull + bear + neutral
     if total == 0:

@@ -64,10 +64,12 @@ def handle_existing_positions(state):
         pnl = pos["unrealized_pl"]
         exit_price = pos["current_price"]
 
-        result = alpaca.close_position(sym, reason=reason)
+        result = alpaca.close_position(alpaca.to_alpaca_symbol(sym, item["asset_class"]), reason=reason)
         if result is not None:
             close_position_db(sym, exit_price, pnl, pnl_pct)
-            if "STOP" in reason.upper():
+            if "TRAILING" in reason.upper():
+                telegram.notify_trailing_stop(sym, pnl, pnl_pct, reason)
+            elif "STOP" in reason.upper():
                 telegram.notify_stop_loss(sym, pnl, pnl_pct)
             else:
                 telegram.notify_take_profit(sym, pnl, pnl_pct)
@@ -81,7 +83,7 @@ def handle_existing_positions(state):
         age_hours = get_open_position_age(sym)
         if age_hours and age_hours > 48:
             logger.info(f"{sym} held for {age_hours:.1f}h — closing stale position")
-            result = alpaca.close_position(sym, reason="Stale position >48h")
+            result = alpaca.close_position(alpaca.to_alpaca_symbol(sym, pos["asset_class"]), reason="Stale position >48h")
             if result is not None:
                 pnl = pos["unrealized_pl"]
                 pnl_pct = pos["unrealized_plpc"]
@@ -109,7 +111,9 @@ def startup_position_audit():
             # Past stop-loss threshold — close immediately
             action_taken = f"Closed immediately (inherited position {pnl_pct*100:+.1f}%, past stop-loss)"
             logger.warning(f"Inherited {sym} at {pnl_pct*100:+.1f}% — closing")
-            alpaca.close_position(sym, reason="Inherited position past stop-loss")
+            # Register in DB first so close_position_db has a row to update
+            open_position(sym, pos["asset_class"], pos["avg_entry_price"], pos["market_value"])
+            alpaca.close_position(alpaca.to_alpaca_symbol(sym, pos["asset_class"]), reason="Inherited position past stop-loss")
             close_position_db(sym, pos["current_price"], pos["unrealized_pl"], pnl_pct)
             telegram.notify_position_inherited(sym, pnl_pct, action_taken)
         else:

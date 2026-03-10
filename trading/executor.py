@@ -44,7 +44,9 @@ def execute_signal(signal, portfolio_state):
         return None
 
     pv = state["portfolio_value"]
-    position_size = get_position_size(pv, asset_class)
+    # Count open positions of this type (+1 for the one we're about to open)
+    n_open = len([p for p in state["all_positions"] if p["asset_class"] == asset_class]) + 1
+    position_size = get_position_size(pv, asset_class, n_open=n_open)
 
     # Get current price
     price = alpaca.get_latest_price(
@@ -66,11 +68,14 @@ def _execute_buy(symbol, asset_class, notional, price, confidence, reasoning):
     """Execute a buy order with bracket (take-profit + stop-loss)."""
     logger.info(f"BUY {symbol} | ${notional:.0f} | price ~${price:.2f} | confidence={confidence:.2f}")
 
+    # Alpaca requires "BTC/USD" format for crypto orders, not bare "BTC"
+    alpaca_symbol = f"{symbol}/USD" if asset_class == "crypto" and "/" not in symbol else symbol
+
     try:
         # Use bracket orders for stocks (cleaner, one API call)
         if asset_class == "us_equity":
             result = alpaca.place_bracket_order(
-                symbol=symbol,
+                symbol=alpaca_symbol,
                 side="buy",
                 notional=notional,
                 take_profit_pct=TAKE_PROFIT_PCT,
@@ -80,7 +85,7 @@ def _execute_buy(symbol, asset_class, notional, price, confidence, reasoning):
         else:
             # Crypto: market order + manual stop tracking (Alpaca crypto doesn't support bracket)
             result = alpaca.place_market_order(
-                symbol=symbol,
+                symbol=alpaca_symbol,
                 side="buy",
                 notional=notional,
                 asset_class="crypto",
@@ -111,8 +116,10 @@ def _execute_buy(symbol, asset_class, notional, price, confidence, reasoning):
 def _execute_sell(symbol, asset_class, reasoning):
     """Close an existing position."""
     logger.info(f"SELL {symbol} — {reasoning}")
+    # Alpaca close_position endpoint also needs "BTC/USD" format for crypto
+    alpaca_symbol = f"{symbol}/USD" if asset_class == "crypto" and "/" not in symbol else symbol
     try:
-        result = alpaca.close_position(symbol, reason=reasoning)
+        result = alpaca.close_position(alpaca_symbol, reason=reasoning)
         if result is not None:
             return {
                 "action": "SELL",

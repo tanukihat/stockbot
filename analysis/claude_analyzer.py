@@ -6,7 +6,7 @@ and outputs structured trade signals.
 import json
 import logging
 import anthropic
-from config import ANTHROPIC_API_KEY, MIN_SENTIMENT_SCORE
+from config import ANTHROPIC_API_KEY, MIN_SENTIMENT_SCORE, CLAUDE_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ def analyze_sentiment_batch(aggregated_data: dict) -> list:
     try:
         logger.info(f"Sending {len(aggregated_data)} symbols to Claude for analysis...")
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model=CLAUDE_MODEL,
             max_tokens=2000,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_prompt}],
@@ -120,7 +120,7 @@ def analyze_existing_position(symbol, asset_class, entry_price, current_price,
 
     try:
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model=CLAUDE_MODEL,
             max_tokens=200,
             messages=[{"role": "user", "content": prompt}],
         )

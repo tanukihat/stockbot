@@ -10,6 +10,7 @@ ALPACA_BASE_URL = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets
 
 # --- Anthropic ---
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
 
 # --- Telegram ---
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -47,7 +48,7 @@ WATCHLIST = {
         "AI", "BBAI", "SOUN", "IONQ", "RGTI", "QUBT", "QBTS"
     ],
     "stocks_quantum": [
-        "IONQ", "RGTI", "QUBT", "QBTS", "IBM", "HONEYWELL"
+        "IONQ", "RGTI", "QUBT", "QBTS", "IBM", "HON"
     ],
     "stocks_minerals": [
         "ALB", "SQM", "LAC", "LTHM", "MP", "UUUU", "PLTM"
@@ -65,6 +66,9 @@ ALL_STOCK_SYMBOLS = list(set(
 ))
 
 ALL_CRYPTO_SYMBOLS = WATCHLIST["crypto"]
+
+# Tickers that are also common English words — require $TICKER prefix to avoid false positives
+DOLLAR_SIGN_ONLY_TICKERS = {"AI", "LINK", "DOT", "SOL", "LAC"}
 
 # Sector keywords for Reddit/news scraping
 SECTOR_KEYWORDS = [

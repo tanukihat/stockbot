@@ -25,7 +25,7 @@ def aggregate_sentiment(scan_crypto=True, scan_stocks=True):
     st_data = {}
     if scan_stocks:
         logger.info("Scraping StockTwits...")
-        st_data = scrape_stocktwits(ALL_STOCK_SYMBOLS[:20])
+        st_data = scrape_stocktwits(ALL_STOCK_SYMBOLS)
 
     # Merge Reddit + StockTwits by symbol
     all_symbols = set(list(reddit_data.keys()) + list(st_data.keys()))

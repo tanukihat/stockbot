@@ -103,6 +103,15 @@ def notify_take_profit(symbol, pnl, pnl_pct):
     notify_trade_closed(symbol, "SELL", pnl, pnl_pct, "✅ Take-profit hit")
 
 
+def notify_trailing_stop(symbol, pnl, pnl_pct, reason):
+    msg = (
+        f"📉 <b>TRAILING STOP: {symbol}</b>\n"
+        f"P&L: <b>{'+' if pnl >= 0 else ''}{pnl:.2f} ({pnl_pct*100:+.1f}%)</b>\n"
+        f"📝 {reason}"
+    )
+    send(msg)
+
+
 def notify_scan_complete(symbols_checked, signals, trades_opened):
     if trades_opened == 0 and not signals:
         # Silent scan — don't spam
