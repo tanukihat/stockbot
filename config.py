@@ -51,6 +51,12 @@ MARKET_OPEN_MINUTE = 30
 MARKET_CLOSE_HOUR = 16
 MARKET_CLOSE_MINUTE = 0
 
+# --- Quiet hours (ET) ---
+# Non-urgent Telegram notifications are suppressed during this window.
+# Urgent alerts (stop-loss, errors) always go through.
+QUIET_HOURS_START = 23  # 11 PM ET
+QUIET_HOURS_END   = 8   # 8 AM ET
+
 # --- Sentiment thresholds ---
 MIN_SENTIMENT_SCORE = 0.65          # Min confidence to open a position (0-1)
 MIN_SENTIMENT_SCORE_URGENT = 0.55   # Lower bar for HIGH urgency signals (squeeze plays)

@@ -7,15 +7,34 @@ messaging your bot and hitting https://api.telegram.org/bot<TOKEN>/getUpdates
 import requests
 import logging
 from datetime import datetime
-from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from zoneinfo import ZoneInfo
+from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, QUIET_HOURS_START, QUIET_HOURS_END
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
+_ET = ZoneInfo("America/New_York")
 
 
-def send(message: str, parse_mode="HTML"):
-    """Send a message to the configured Telegram chat."""
+def _is_quiet_hours() -> bool:
+    """Returns True if current ET time is within the configured quiet window."""
+    hour = datetime.now(_ET).hour
+    if QUIET_HOURS_START > QUIET_HOURS_END:
+        # Wraps midnight: e.g. 23 → 8
+        return hour >= QUIET_HOURS_START or hour < QUIET_HOURS_END
+    return QUIET_HOURS_START <= hour < QUIET_HOURS_END
+
+
+def send(message: str, parse_mode="HTML", urgent=False):
+    """
+    Send a message to the configured Telegram chat.
+    During quiet hours, non-urgent messages are silently dropped.
+    Pass urgent=True for stop-losses, errors, etc. that should always go through.
+    """
+    if not urgent and _is_quiet_hours():
+        logger.debug("Quiet hours — suppressing notification")
+        return
+
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         logger.warning("Telegram not configured — printing notification instead")
         print(f"\n📱 NOTIFICATION:\n{message}\n")
@@ -96,7 +115,11 @@ def notify_trade_closed(symbol, action, pnl, pnl_pct, reason, exit_price=None):
 
 
 def notify_stop_loss(symbol, pnl, pnl_pct):
-    notify_trade_closed(symbol, "SELL", pnl, pnl_pct, "🛑 Stop-loss triggered")
+    msg = (
+        f"🛑 <b>STOP-LOSS: {symbol}</b>\n"
+        f"P&L: <b>{'+' if pnl >= 0 else ''}{pnl:.2f} ({pnl_pct*100:+.1f}%)</b>"
+    )
+    send(msg, urgent=True)
 
 
 def notify_take_profit(symbol, pnl, pnl_pct):
@@ -151,7 +174,7 @@ def notify_daily_summary(summary: dict, portfolio_state: dict):
 
 
 def notify_error(message: str):
-    send(f"⚠️ <b>Bot Error</b>\n{message}")
+    send(f"⚠️ <b>Bot Error</b>\n{message}", urgent=True)
 
 
 def notify_position_inherited(symbol, pnl_pct, action):
