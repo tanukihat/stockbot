@@ -168,11 +168,21 @@ def run_trading_cycle(scan_stocks=True, scan_crypto=True):
         # Sort by confidence descending
         signals.sort(key=lambda x: x.get("confidence", 0), reverse=True)
 
+        # Log all actionable signals for observability
+        for s in signals:
+            logger.info(
+                f"Signal: {s['action']} {s['symbol']} "
+                f"conf={s.get('confidence', 0):.2f} urgency={s.get('urgency', '?')} "
+                f"wsb={s.get('wsb_signal', False)} — {s.get('reasoning', '')[:80]}"
+            )
+
         # --- Step 4: Execute top signals ---
         trades_executed = 0
         executed_symbols = set()
 
         # Refresh state before each execution to respect slot limits
+        market_open = alpaca.is_market_open()
+
         for signal in signals:
             if signal["action"] not in ("BUY",):
                 continue
@@ -184,6 +194,11 @@ def run_trading_cycle(scan_stocks=True, scan_crypto=True):
 
             sym = signal["symbol"]
             asset_class = signal.get("asset_class", "us_equity")
+
+            # Don't try to place stock orders after hours — bracket orders will be rejected
+            if asset_class == "us_equity" and not market_open:
+                logger.info(f"Skipping {sym} — market closed, stock orders not accepted")
+                continue
 
             # Respect allocation targets
             if asset_class == "crypto" and current_state["crypto_pct"] >= TARGET_CRYPTO_PCT + 0.10:

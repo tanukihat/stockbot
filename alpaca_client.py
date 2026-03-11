@@ -95,6 +95,12 @@ def close_position(symbol, reason=""):
     try:
         return _delete(f"/positions/{symbol}")
     except requests.HTTPError as e:
+        status = e.response.status_code
+        if status in (403, 404, 422):
+            # 403/422 = order already in flight; 404 = position already gone
+            # Both mean the position is being/has been closed — treat as success
+            logger.info(f"Position {symbol} already closed or close in progress (HTTP {status}) — OK")
+            return {}
         logger.error(f"Failed to close {symbol}: {e}")
         return None
 

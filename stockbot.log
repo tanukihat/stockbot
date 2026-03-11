@@ -1,0 +1,18 @@
+2026-03-10 20:22:40,759 [INFO] stockbot.main: 🚀 StockBot starting up...
+2026-03-10 20:22:40,760 [INFO] data.db: Database initialized at /home/tanuk/workspace/stockbot/data/stockbot.db
+2026-03-10 20:22:41,178 [INFO] stockbot.main: Startup audit of inherited positions...
+2026-03-10 20:22:41,179 [WARNING] stockbot.main: Inherited AMD at -16.3% — closing
+2026-03-10 20:22:41,202 [INFO] alpaca_client: Closing position: AMD — Inherited position past stop-loss
+2026-03-10 20:22:44,447 [INFO] stockbot.main: Running initial cycle...
+2026-03-10 20:22:44,653 [INFO] stockbot.main: === Trading cycle start | stocks=False crypto=True ===
+2026-03-10 20:22:45,100 [INFO] alpaca_client: Closing position: AMD — STOP-LOSS triggered at -16.3%
+2026-03-10 20:22:45,327 [ERROR] alpaca_client: Failed to close AMD: 403 Client Error: Forbidden for url: https://paper-api.alpaca.markets/v2/positions/AMD
+2026-03-10 20:22:45,761 [INFO] sentiment.aggregator: Scraping Reddit...
+2026-03-10 20:23:13,189 [INFO] sentiment.reddit: Reddit: found mentions for 13 symbols across 339 unique posts
+2026-03-10 20:23:13,190 [INFO] sentiment.aggregator: Aggregated sentiment for 12 symbols
+2026-03-10 20:23:13,190 [INFO] analysis.claude_analyzer: Sending 12 symbols to Claude for analysis...
+2026-03-10 20:23:38,846 [INFO] httpx: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-03-10 20:23:38,881 [INFO] analysis.claude_analyzer: Claude returned 12 signals
+2026-03-10 20:23:38,881 [INFO] analysis.claude_analyzer: 2 signals meet confidence threshold (0.65)
+2026-03-10 20:23:40,057 [INFO] stockbot.main: === Cycle complete in 55.4s | 0 trades executed ===
+2026-03-10 20:23:40,058 [INFO] stockbot.main: Scheduler running. Ctrl+C to stop.
