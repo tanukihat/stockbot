@@ -52,10 +52,33 @@ def handle_existing_positions(state):
     """
     to_close = check_stop_and_take_profit(state)
 
+    # Build set of symbols already being closed (pending sell orders) so we
+    # don't spam notifications on every cycle while waiting for market open.
+    pending_sells = set()
+    try:
+        open_orders = alpaca.get_open_orders()
+        pending_sells = {
+            o["symbol"].replace("/USD", "").rstrip("USD") if len(o["symbol"]) > 3 else o["symbol"]
+            for o in open_orders
+            if o.get("side") == "sell"
+        }
+        # Also keep the raw symbol in case normalization is off
+        for o in open_orders:
+            if o.get("side") == "sell":
+                pending_sells.add(o["symbol"])
+    except Exception as e:
+        logger.warning(f"Couldn't fetch open orders for dedup check: {e}")
+
     for item in to_close:
         sym = item["symbol"]
         reason = item["reason"]
         pnl_pct = item["pnl_pct"]
+
+        # Already has a pending close order — skip entirely, don't re-notify
+        alpaca_sym = alpaca.to_alpaca_symbol(sym, item["asset_class"])
+        if sym in pending_sells or alpaca_sym in pending_sells:
+            logger.info(f"{sym} already has a pending sell order — skipping close/notify")
+            continue
 
         # Find full position data
         all_pos = {p["symbol"]: p for p in state["all_positions"]}
@@ -66,8 +89,10 @@ def handle_existing_positions(state):
         pnl = pos["unrealized_pl"]
         exit_price = pos["current_price"]
 
-        result = alpaca.close_position(alpaca.to_alpaca_symbol(sym, item["asset_class"]), reason=reason)
-        if result is not None:
+        result = alpaca.close_position(alpaca_sym, reason=reason)
+        # Only notify on a fresh close (result has order details), not on
+        # "already in progress" (result == {} from 403/404/422)
+        if result and result.get("id"):
             close_position_db(sym, exit_price, pnl, pnl_pct)
             if "TRAILING" in reason.upper():
                 telegram.notify_trailing_stop(sym, pnl, pnl_pct, reason)
@@ -76,6 +101,8 @@ def handle_existing_positions(state):
             else:
                 telegram.notify_take_profit(sym, pnl, pnl_pct)
             logger.info(f"Closed {sym}: {reason} | PnL: {pnl_pct*100:+.1f}%")
+        elif result is not None:
+            logger.info(f"{sym} close already in progress (no order id returned)")
 
     # Close any positions held stale for >48h without hitting targets
     for pos in state["all_positions"]:
