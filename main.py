@@ -23,7 +23,9 @@ from data.db import (
 )
 from config import (
     MAX_POSITIONS, TARGET_OPTIONS_PCT, TARGET_CRYPTO_PCT, TARGET_STOCK_PCT,
-    STOP_LOSS_PCT, MIN_SENTIMENT_SCORE, ALL_CRYPTO_SYMBOLS
+    STOP_LOSS_PCT, MIN_SENTIMENT_SCORE, MIN_SENTIMENT_SCORE_URGENT,
+    ALL_CRYPTO_SYMBOLS, SCAN_INTERVAL_MINUTES, CRYPTO_SCAN_INTERVAL_MINUTES,
+    EOD_CLOSE_STOCKS, EOD_CLOSE_TIME
 )
 
 # --- Logging setup ---
@@ -165,8 +167,11 @@ def run_trading_cycle(scan_stocks=True, scan_crypto=True):
         held = {p["symbol"] for p in state["all_positions"]}
         signals = [s for s in signals if s["symbol"] not in held]
 
-        # Sort by confidence descending
-        signals.sort(key=lambda x: x.get("confidence", 0), reverse=True)
+        # Sort: HIGH urgency first, then by confidence descending
+        signals.sort(key=lambda x: (
+            0 if x.get("urgency") == "HIGH" else 1,
+            -x.get("confidence", 0)
+        ))
 
         # Log all actionable signals for observability
         for s in signals:
@@ -198,6 +203,13 @@ def run_trading_cycle(scan_stocks=True, scan_crypto=True):
             # Don't try to place stock orders after hours — bracket orders will be rejected
             if asset_class == "us_equity" and not market_open:
                 logger.info(f"Skipping {sym} — market closed, stock orders not accepted")
+                continue
+
+            # HIGH urgency signals (squeeze plays etc.) get a lower confidence bar
+            urgency = signal.get("urgency", "LOW")
+            threshold = MIN_SENTIMENT_SCORE_URGENT if urgency == "HIGH" else MIN_SENTIMENT_SCORE
+            if signal.get("confidence", 0) < threshold:
+                logger.info(f"Skipping {sym} — confidence {signal.get('confidence',0):.2f} below threshold {threshold} (urgency={urgency})")
                 continue
 
             # Respect allocation targets
@@ -276,6 +288,32 @@ def run_crypto_cycle():
         run_trading_cycle(scan_stocks=False, scan_crypto=True)
 
 
+def close_all_stock_positions():
+    """
+    EOD flatten — close all stock positions by EOD_CLOSE_TIME.
+    Crypto stays open 24/7. This is day trader mode.
+    """
+    if not EOD_CLOSE_STOCKS:
+        return
+    state = get_portfolio_state()
+    stock_pos = state["stock_positions"]
+    if not stock_pos:
+        logger.info("EOD close: no stock positions to flatten")
+        return
+    logger.info(f"EOD close: flattening {len(stock_pos)} stock position(s)")
+    for pos in stock_pos:
+        sym = pos["symbol"]
+        pnl = pos["unrealized_pl"]
+        pnl_pct = pos["unrealized_plpc"]
+        result = alpaca.close_position(
+            alpaca.to_alpaca_symbol(sym, "us_equity"), reason="EOD flatten"
+        )
+        if result is not None:
+            close_position_db(sym, pos["current_price"], pnl, pnl_pct)
+            telegram.notify_trade_closed(sym, "SELL", pnl, pnl_pct, "EOD flatten", pos["current_price"])
+            logger.info(f"EOD closed {sym}: PnL {pnl_pct*100:+.1f}%")
+
+
 def send_daily_summary():
     """4pm ET daily summary."""
     state = get_portfolio_state()
@@ -297,11 +335,14 @@ def main():
     telegram.notify_startup(state)
 
     # --- Schedule ---
-    # Market hours: every 30 minutes
-    schedule.every(30).minutes.do(run_market_cycle)
+    # Market hours: configurable interval (default 15 min)
+    schedule.every(SCAN_INTERVAL_MINUTES).minutes.do(run_market_cycle)
 
-    # Crypto: every 60 minutes (runs outside market hours)
-    schedule.every(60).minutes.do(run_crypto_cycle)
+    # Crypto: configurable (default 30 min, runs 24/7)
+    schedule.every(CRYPTO_SCAN_INTERVAL_MINUTES).minutes.do(run_crypto_cycle)
+
+    # EOD flatten: close all stock positions before close
+    schedule.every().day.at(EOD_CLOSE_TIME).do(close_all_stock_positions)
 
     # Daily summary at 4:05 PM ET
     schedule.every().day.at("16:05").do(send_daily_summary)

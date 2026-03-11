@@ -97,27 +97,6 @@ def get_position_size(portfolio_value, asset_class, n_open=1):
     return portfolio_value * target_pct
 
 
-def check_needs_rebalance(state):
-    """
-    Check if portfolio allocation is significantly off-target.
-    Returns a list of rebalance suggestions.
-    """
-    suggestions = []
-    pv = state["portfolio_value"]
-
-    stock_diff = state["stock_pct"] - TARGET_STOCK_PCT
-    crypto_diff = state["crypto_pct"] - TARGET_CRYPTO_PCT
-
-    if abs(stock_diff) > 0.15:
-        direction = "reduce" if stock_diff > 0 else "increase"
-        suggestions.append(f"Stocks at {state['stock_pct']*100:.0f}% vs target {TARGET_STOCK_PCT*100:.0f}% — {direction}")
-
-    if abs(crypto_diff) > 0.10:
-        direction = "reduce" if crypto_diff > 0 else "increase"
-        suggestions.append(f"Crypto at {state['crypto_pct']*100:.0f}% vs target {TARGET_CRYPTO_PCT*100:.0f}% — {direction}")
-
-    return suggestions
-
 
 def check_stop_and_take_profit(state):
     """

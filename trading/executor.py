@@ -133,17 +133,6 @@ def _execute_sell(symbol, asset_class, reasoning):
         return {"action": "SELL_FAILED", "symbol": symbol, "error": str(e)}
 
 
-def close_stale_positions(portfolio_state, max_hold_hours=48):
-    """
-    Close positions that have been held too long without hitting TP/SL.
-    The bot is a scalper — stale positions are dead weight.
-    """
-    closed = []
-    # Note: Alpaca doesn't give us open_time directly in positions endpoint
-    # We track this in our own DB. For now, we use the portfolio check logic.
-    # This is handled by the DB-tracked entry time in main.py
-    return closed
-
 
 def buy_options_call(underlying, confidence, portfolio_value):
     """

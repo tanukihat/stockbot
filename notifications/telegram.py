@@ -113,9 +113,9 @@ def notify_trailing_stop(symbol, pnl, pnl_pct, reason):
 
 
 def notify_scan_complete(symbols_checked, signals, trades_opened):
-    if trades_opened == 0 and not signals:
-        # Silent scan — don't spam
-        logger.info(f"Scan complete: {symbols_checked} checked, no trades")
+    # Only notify if trades actually happened — signals with no trades is just noise
+    if trades_opened == 0:
+        logger.info(f"Scan complete: {symbols_checked} checked, {len(signals)} signals, no trades")
         return
 
     sig_str = ""

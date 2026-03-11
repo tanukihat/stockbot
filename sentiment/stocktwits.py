@@ -17,20 +17,23 @@ BASE_URL = "https://api.stocktwits.com/api/2"
 CRYPTO_MAP = {s: s.replace("/", "") for s in ALL_CRYPTO_SYMBOLS}
 
 
-def fetch_symbol_stream(symbol, limit=30):
-    """Fetch the latest messages for a symbol from StockTwits."""
+def fetch_symbol_stream(symbol, limit=30, retries=3):
+    """Fetch the latest messages for a symbol from StockTwits. Retries on 429."""
     url = f"{BASE_URL}/streams/symbol/{symbol}.json"
-    try:
-        r = requests.get(url, headers=HEADERS, params={"limit": limit}, timeout=10)
-        if r.status_code == 429:
-            logger.warning(f"StockTwits rate limited on {symbol}")
+    for attempt in range(retries):
+        try:
+            r = requests.get(url, headers=HEADERS, params={"limit": limit}, timeout=10)
+            if r.status_code == 429:
+                wait = 2 ** attempt
+                logger.warning(f"StockTwits rate limited on {symbol}, retrying in {wait}s...")
+                time.sleep(wait)
+                continue
+            r.raise_for_status()
+            return r.json().get("messages", [])
+        except Exception as e:
+            logger.warning(f"StockTwits fetch failed for {symbol}: {e}")
             return []
-        r.raise_for_status()
-        data = r.json()
-        return data.get("messages", [])
-    except Exception as e:
-        logger.warning(f"StockTwits fetch failed for {symbol}: {e}")
-        return []
+    return []
 
 
 def parse_sentiment(messages):

@@ -35,23 +35,26 @@ TARGET_OPTIONS_PCT = 0.15
 MAX_POSITIONS = 5
 
 # --- Risk management ---
-STOP_LOSS_PCT = 0.08       # Close position if down 8%
-TAKE_PROFIT_PCT = 0.07     # Close position if up 7%
-TRAILING_STOP_PCT = 0.04   # Trailing stop once up 5% (locks in gains)
-TRAILING_ACTIVATE_PCT = 0.05  # Activate trailing stop after 5% gain
-MAX_POSITION_PCT = 0.22    # Max 22% of portfolio in a single position
+STOP_LOSS_PCT = 0.05          # Scalper exits fast at -5% (was 8% — too forgiving)
+TAKE_PROFIT_PCT = 0.07        # Take 7% and run
+TRAILING_STOP_PCT = 0.02      # Lock in gains: fire if drops 2% from peak
+TRAILING_ACTIVATE_PCT = 0.03  # Activate trailing stop after 3% gain (was 5%)
+MAX_POSITION_PCT = 0.22       # Max 22% of portfolio in a single position
+EOD_CLOSE_STOCKS = True       # Close all stock positions by 3:50 PM (day trader mode)
+EOD_CLOSE_TIME = "15:50"      # Time to flatten stock positions (ET)
 
 # --- Scheduling ---
-SCAN_INTERVAL_MINUTES = 30     # How often to scan for new trades
-CRYPTO_SCAN_INTERVAL_MINUTES = 60  # Crypto scans (24/7)
+SCAN_INTERVAL_MINUTES = 15        # Market hours scan frequency (was 30, ignored — now used)
+CRYPTO_SCAN_INTERVAL_MINUTES = 30 # Crypto scans 24/7
 MARKET_OPEN_HOUR = 9
 MARKET_OPEN_MINUTE = 30
 MARKET_CLOSE_HOUR = 16
 MARKET_CLOSE_MINUTE = 0
 
 # --- Sentiment thresholds ---
-MIN_SENTIMENT_SCORE = 0.65     # Min confidence to open a position (0-1)
-MIN_SENTIMENT_MENTIONS = 3     # Min number of source mentions to consider
+MIN_SENTIMENT_SCORE = 0.65          # Min confidence to open a position (0-1)
+MIN_SENTIMENT_SCORE_URGENT = 0.55   # Lower bar for HIGH urgency signals (squeeze plays)
+MIN_SENTIMENT_MENTIONS = 3          # Min number of source mentions to consider
 
 # --- Watchlists ---
 WATCHLIST = {

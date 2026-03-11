@@ -139,7 +139,7 @@ def basic_sentiment(text):
 
 
 # Score threshold to bother fetching comments (saves API calls)
-COMMENT_FETCH_MIN_SCORE = 500
+COMMENT_FETCH_MIN_SCORE = 1500
 
 
 def scrape_reddit():
