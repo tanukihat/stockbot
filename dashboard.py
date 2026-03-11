@@ -162,7 +162,7 @@ def build_chart(period="1M", out="equity_chart.html"):
         visible=True,
     ))
 
-    # S&P 500 (SPY) — toggleable (starts visible)
+    # S&P 500 (SPY) — toggleable (starts hidden)
     spy_pnl = (spy_closes[-1] / spy_closes[0] - 1) * 100 if spy_closes else 0
     fig.add_trace(go.Scatter(
         x=spy_dates,
@@ -171,10 +171,10 @@ def build_chart(period="1M", out="equity_chart.html"):
         line=dict(color="#f0a500", width=1.5, dash="dot"),
         hovertemplate="%{x}<br>SPY: $%{customdata:.2f} (%{y:.3f}x)<extra></extra>",
         customdata=spy_closes,
-        visible=True,
+        visible="legendonly",
     ))
 
-    # QQQ — toggleable (starts visible)
+    # QQQ — toggleable (starts hidden)
     qqq_pnl = (qqq_closes[-1] / qqq_closes[0] - 1) * 100 if qqq_closes else 0
     fig.add_trace(go.Scatter(
         x=qqq_dates,
@@ -183,10 +183,10 @@ def build_chart(period="1M", out="equity_chart.html"):
         line=dict(color="#9b59b6", width=1.5, dash="dot"),
         hovertemplate="%{x}<br>QQQ: $%{customdata:.2f} (%{y:.3f}x)<extra></extra>",
         customdata=qqq_closes,
-        visible=True,
+        visible="legendonly",
     ))
 
-    # Total capital reference line — toggleable (starts visible)
+    # Total capital reference line — toggleable (starts hidden)
     cap_label = f"Starting Capital  (${base_value:,.0f})" if base_value else "Starting Capital"
     fig.add_trace(go.Scatter(
         x=cap_dates,
@@ -194,7 +194,7 @@ def build_chart(period="1M", out="equity_chart.html"):
         name=cap_label,
         line=dict(color="#e74c3c", width=1.2, dash="dash"),
         hovertemplate="Starting capital reference<extra></extra>",
-        visible=True,
+        visible="legendonly",
     ))
 
     # -----------------------------------------------------------------------
