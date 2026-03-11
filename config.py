@@ -53,6 +53,11 @@ WATCHLIST = {
     "stocks_minerals": [
         "ALB", "SQM", "LAC", "LTHM", "MP", "UUUU", "PLTM"
     ],
+    # WSB/degen favorites — high vol, meme momentum, always discussed on WSB
+    "stocks_wsb": [
+        "TSLA", "MSTR", "COIN", "HOOD", "RKLB", "JOBY", "LUNR",
+        "GME", "AMC", "BBAI", "CLOV", "SPCE",
+    ],
     "crypto": [
         "BTC/USD", "ETH/USD", "SOL/USD", "AVAX/USD", "LINK/USD", "DOT/USD"
     ],
@@ -62,28 +67,42 @@ WATCHLIST = {
 ALL_STOCK_SYMBOLS = list(set(
     WATCHLIST["stocks_ai"] +
     WATCHLIST["stocks_quantum"] +
-    WATCHLIST["stocks_minerals"]
+    WATCHLIST["stocks_minerals"] +
+    WATCHLIST["stocks_wsb"]
 ))
 
 ALL_CRYPTO_SYMBOLS = WATCHLIST["crypto"]
 
 # Tickers that are also common English words — require $TICKER prefix to avoid false positives
-DOLLAR_SIGN_ONLY_TICKERS = {"AI", "LINK", "DOT", "SOL", "LAC"}
+DOLLAR_SIGN_ONLY_TICKERS = {"AI", "LINK", "DOT", "SOL", "LAC", "HOOD", "CLOV", "COIN", "JOBY"}
 
 # Sector keywords for Reddit/news scraping
 SECTOR_KEYWORDS = [
     "artificial intelligence", "AI stocks", "quantum computing", "quantum stocks",
     "lithium", "cobalt", "rare earth", "strategic minerals", "EV battery",
     "NVDA", "PLTR", "IONQ", "RGTI", "ALB", "SQM", "LAC",
-    "SMCI", "QUBT", "QBTS", "BBAI"
+    "SMCI", "QUBT", "QBTS", "BBAI",
+    # WSB flavor
+    "TSLA", "MSTR", "GME", "RKLB", "LUNR", "tendies", "yolo", "calls", "puts",
+    "squeeze", "gamma squeeze", "short squeeze", "apes", "moon",
 ]
 
-# Subreddits to monitor
-REDDIT_SUBS = [
-    "wallstreetbets", "stocks", "investing", "algotrading",
-    "MachineLearning", "QuantumComputing", "CryptoCurrency",
-    "Superstonk", "StockMarket"
+# Subreddit config: (name, post_limit, sorts_to_fetch)
+# WSB gets the royal treatment — more posts, multiple sort feeds
+REDDIT_SUB_CONFIG = [
+    ("wallstreetbets",   100, ["hot", "new", "rising"]),
+    ("wallstreetbetsnew", 50, ["hot", "new"]),
+    ("thetagang",         30, ["hot"]),
+    ("options",           30, ["hot"]),
+    ("stocks",            25, ["hot"]),
+    ("investing",         20, ["hot"]),
+    ("Superstonk",        30, ["hot"]),
+    ("CryptoCurrency",    25, ["hot"]),
+    ("StockMarket",       20, ["hot"]),
 ]
+
+# Keep a flat list for compatibility
+REDDIT_SUBS = [sub for sub, _, _ in REDDIT_SUB_CONFIG]
 
 # Options config
 OPTIONS_MAX_DTE = 14       # Max days to expiration for options plays
