@@ -22,10 +22,10 @@ from data.db import (
     log_scan, get_daily_summary, get_open_position_age
 )
 from config import (
-    MAX_POSITIONS, TARGET_OPTIONS_PCT, TARGET_CRYPTO_PCT, TARGET_STOCK_PCT,
+    MAX_POSITIONS, MIN_POSITIONS, TARGET_OPTIONS_PCT, TARGET_CRYPTO_PCT, TARGET_STOCK_PCT,
     STOP_LOSS_PCT, MIN_SENTIMENT_SCORE, MIN_SENTIMENT_SCORE_URGENT,
     ALL_CRYPTO_SYMBOLS, SCAN_INTERVAL_MINUTES, CRYPTO_SCAN_INTERVAL_MINUTES,
-    EOD_CLOSE_STOCKS, EOD_CLOSE_TIME
+    EOD_CLOSE_STOCKS, EOD_CLOSE_TIME, TARGET_DEPLOYED_PCT
 )
 
 # --- Logging setup ---
@@ -181,10 +181,20 @@ def run_trading_cycle(scan_stocks=True, scan_crypto=True):
         # Refresh state after closes
         state = get_portfolio_state()
 
+        n_positions = state["total_positions"]
+        deployed_pct = 1 - (state["cash"] / state["portfolio_value"])
+        under_min = n_positions < MIN_POSITIONS
+        under_deployed = deployed_pct < TARGET_DEPLOYED_PCT - 0.10  # >10% below target
+
         if state["open_slots"] <= 0:
             logger.info("All position slots full — skipping sentiment scan")
             log_scan(0, 0, 0, "All slots full")
             return
+
+        if not under_min and not under_deployed:
+            logger.info(f"Positions: {n_positions} | Deployed: {deployed_pct:.0%} — adequately capitalized")
+        else:
+            logger.info(f"Positions: {n_positions} (min={MIN_POSITIONS}) | Deployed: {deployed_pct:.0%} — seeking trades")
 
         # --- Step 2: Sentiment scraping ---
         aggregated = aggregate_sentiment(scan_crypto=scan_crypto, scan_stocks=scan_stocks)
@@ -241,7 +251,11 @@ def run_trading_cycle(scan_stocks=True, scan_crypto=True):
 
             # HIGH urgency signals (squeeze plays etc.) get a lower confidence bar
             urgency = signal.get("urgency", "LOW")
-            threshold = MIN_SENTIMENT_SCORE_URGENT if urgency == "HIGH" else MIN_SENTIMENT_SCORE
+            # Lower bar when we need to fill positions or deploy capital
+            if under_min or under_deployed:
+                threshold = MIN_SENTIMENT_SCORE_URGENT  # more aggressive
+            else:
+                threshold = MIN_SENTIMENT_SCORE_URGENT if urgency == "HIGH" else MIN_SENTIMENT_SCORE
             if signal.get("confidence", 0) < threshold:
                 logger.info(f"Skipping {sym} — confidence {signal.get('confidence',0):.2f} below threshold {threshold} (urgency={urgency})")
                 continue
