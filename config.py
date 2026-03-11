@@ -12,6 +12,18 @@ ALPACA_BASE_URL = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
 
+# Model used for bulk sentiment analysis (runs every 30 min — keep it cheap).
+# Options:
+#   claude-3-5-haiku-20241022       ~$0.23/day  (default, recommended)
+#   claude-sonnet-4-6               ~$0.86/day  (overkill for JSON parsing)
+#   openrouter/<model>              free tier available — requires OPENROUTER_API_KEY
+#     e.g. meta-llama/llama-3.3-70b-instruct:free
+#          google/gemini-2.0-flash-exp:free
+ANALYSIS_MODEL = os.getenv("ANALYSIS_MODEL", "claude-3-haiku-20240307")
+
+# --- OpenRouter (optional, enables free-tier models) ---
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+
 # --- Telegram ---
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
