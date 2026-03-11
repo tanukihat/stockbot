@@ -6,7 +6,7 @@ messaging your bot and hitting https://api.telegram.org/bot<TOKEN>/getUpdates
 """
 import requests
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, QUIET_HOURS_START, QUIET_HOURS_END
 
@@ -14,6 +14,11 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
 _ET = ZoneInfo("America/New_York")
+
+# Dedup cache: { key: last_sent_datetime }
+# Prevents the same alert firing on every scan cycle for a stuck position.
+_dedup_cache: dict = {}
+_DEDUP_TTL_HOURS = 4
 
 
 def _is_quiet_hours() -> bool:
@@ -25,14 +30,28 @@ def _is_quiet_hours() -> bool:
     return QUIET_HOURS_START <= hour < QUIET_HOURS_END
 
 
-def send(message: str, parse_mode="HTML", urgent=False):
+def _is_duplicate(key: str) -> bool:
+    """Returns True if this key was sent within the dedup TTL window."""
+    last = _dedup_cache.get(key)
+    if last and (datetime.now() - last) < timedelta(hours=_DEDUP_TTL_HOURS):
+        return True
+    _dedup_cache[key] = datetime.now()
+    return False
+
+
+def send(message: str, parse_mode="HTML", urgent=False, dedup_key: str = None):
     """
     Send a message to the configured Telegram chat.
-    During quiet hours, non-urgent messages are silently dropped.
-    Pass urgent=True for stop-losses, errors, etc. that should always go through.
+    - During quiet hours, all notifications are silently dropped.
+    - If dedup_key is set, identical alerts won't repeat within _DEDUP_TTL_HOURS.
+    - urgent=True bypasses quiet hours (bot errors only — use sparingly).
     """
     if not urgent and _is_quiet_hours():
         logger.debug("Quiet hours — suppressing notification")
+        return
+
+    if dedup_key and _is_duplicate(dedup_key):
+        logger.debug(f"Dedup suppressed: {dedup_key}")
         return
 
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
@@ -111,15 +130,11 @@ def notify_trade_closed(symbol, action, pnl, pnl_pct, reason, exit_price=None):
         f"P&L: <b>{'+' if pnl >= 0 else ''}{pnl:.2f} ({pnl_pct*100:+.1f}%)</b>\n"
         f"Reason: {reason}{price_str}"
     )
-    send(msg)
+    send(msg, dedup_key=f"closed:{symbol}:{reason[:20]}")
 
 
 def notify_stop_loss(symbol, pnl, pnl_pct):
-    msg = (
-        f"🛑 <b>STOP-LOSS: {symbol}</b>\n"
-        f"P&L: <b>{'+' if pnl >= 0 else ''}{pnl:.2f} ({pnl_pct*100:+.1f}%)</b>"
-    )
-    send(msg, urgent=True)
+    notify_trade_closed(symbol, "SELL", pnl, pnl_pct, "🛑 Stop-loss triggered")
 
 
 def notify_take_profit(symbol, pnl, pnl_pct):
@@ -132,7 +147,7 @@ def notify_trailing_stop(symbol, pnl, pnl_pct, reason):
         f"P&L: <b>{'+' if pnl >= 0 else ''}{pnl:.2f} ({pnl_pct*100:+.1f}%)</b>\n"
         f"📝 {reason}"
     )
-    send(msg)
+    send(msg, dedup_key=f"trailing:{symbol}")
 
 
 def notify_scan_complete(symbols_checked, signals, trades_opened):
