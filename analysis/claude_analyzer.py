@@ -120,13 +120,34 @@ def _call_model(system, user_content, max_tokens=2000, model=None):
 
 
 def _parse_signals(raw):
-    """Strip markdown fences and parse JSON signal array."""
+    """
+    Extract and parse a JSON array from model output.
+    Handles: markdown fences, preamble text, trailing commentary.
+    """
     text = raw.strip()
-    if text.startswith("```"):
+
+    # Strip markdown code fences
+    if "```" in text:
         parts = text.split("```")
-        text = parts[1]
-        if text.startswith("json"):
-            text = text[4:]
+        for part in parts:
+            part = part.strip()
+            if part.startswith("json"):
+                part = part[4:]
+            part = part.strip()
+            if part.startswith("[") or part.startswith("{"):
+                text = part
+                break
+
+    # If there's preamble text before the JSON array, slice from first '['
+    bracket = text.find("[")
+    if bracket > 0:
+        text = text[bracket:]
+
+    # Trim anything after the closing ']'
+    last = text.rfind("]")
+    if last != -1:
+        text = text[:last + 1]
+
     return json.loads(text.strip())
 
 
