@@ -8,7 +8,7 @@ Market hours: every 30 min | Crypto (24/7): every 60 min | Daily summary: 4pm ET
 import logging
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import schedule
 
 import alpaca_client as alpaca
@@ -43,6 +43,10 @@ CRYPTO_SYMBOLS_BASE = [s.split("/")[0] for s in ALL_CRYPTO_SYMBOLS]
 
 # Track the last AMD-cleanup so we don't run it every cycle
 _startup_cleanup_done = False
+
+# Order fill tracking — notify when pending orders execute
+_seen_order_ids: set = set()
+_order_fill_initialized = False
 
 
 def handle_existing_positions(state):
@@ -167,6 +171,9 @@ def run_trading_cycle(scan_stocks=True, scan_crypto=True):
     start = time.time()
 
     try:
+        # --- Step 0: Check for filled orders and notify ---
+        check_order_fills()
+
         # --- Step 1: Position management ---
         state = get_portfolio_state()
         handle_existing_positions(state)
@@ -341,11 +348,131 @@ def close_all_stock_positions():
             logger.info(f"EOD closed {sym}: PnL {pnl_pct*100:+.1f}%")
 
 
+def check_order_fills():
+    """
+    Detect when pending orders fill and send a notification.
+    Runs each cycle. On first call, seeds the seen-set without notifying.
+    """
+    global _seen_order_ids, _order_fill_initialized
+    try:
+        # Fetch orders closed in the last 24h
+        since = (datetime.now(timezone.utc) - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        filled = alpaca.get_filled_orders(since=since)
+        if not _order_fill_initialized:
+            # First run — seed the set so we don't spam history on startup
+            _seen_order_ids = {o["id"] for o in filled}
+            _order_fill_initialized = True
+            logger.info(f"Order fill tracker seeded with {len(_seen_order_ids)} existing fills")
+            return
+
+        for order in filled:
+            oid = order["id"]
+            if oid in _seen_order_ids:
+                continue
+            _seen_order_ids.add(oid)
+
+            sym = order["symbol"].replace("/USD", "")
+            side = order["side"]
+            qty = float(order.get("filled_qty") or order.get("qty") or 0)
+            avg_price = float(order.get("filled_avg_price") or 0)
+
+            # Try to get P&L from DB for sells
+            pnl, pnl_pct = None, None
+            if side == "sell":
+                conn = __import__("data.db", fromlist=["get_conn"]).get_conn()
+                row = conn.execute(
+                    "SELECT entry_price, notional FROM position_log WHERE symbol=? ORDER BY open_time DESC LIMIT 1",
+                    (sym,)
+                ).fetchone()
+                conn.close()
+                if row and row["entry_price"] and avg_price:
+                    pnl_pct = (avg_price / row["entry_price"]) - 1
+                    pnl = pnl_pct * float(row["notional"] or 0)
+                # Mark closed in DB
+                close_position_db(sym, avg_price, pnl or 0, pnl_pct or 0)
+
+            logger.info(f"Order filled: {side.upper()} {sym} qty={qty} @ ${avg_price:.2f}")
+            telegram.notify_order_filled(sym, side, qty, avg_price, pnl, pnl_pct)
+
+    except Exception as e:
+        logger.warning(f"Order fill check failed: {e}")
+
+
+def send_morning_digest():
+    """
+    9:00 AM ET — scrape sentiment and send a pre-market briefing with today's plan.
+    """
+    logger.info("Generating morning digest...")
+    try:
+        state = get_portfolio_state()
+        pv = state["portfolio_value"]
+        cash = state["cash"]
+        positions = state["all_positions"]
+
+        # Scrape fresh sentiment
+        aggregated = aggregate_sentiment(scan_crypto=True, scan_stocks=True)
+        signals = analyze_sentiment_batch(aggregated) if aggregated else []
+
+        pos_str = "\n".join(
+            f"  • {p['symbol']}: ${p['market_value']:,.0f} ({p['unrealized_plpc']*100:+.1f}%)"
+            for p in positions
+        ) or "  (none)"
+
+        buy_signals = [s for s in signals if s["action"] == "BUY"]
+        watch_str = ""
+        for s in buy_signals[:5]:
+            watch_str += (
+                f"  🎯 <b>{s['symbol']}</b> — {s.get('reasoning', '')[:80]}\n"
+                f"     Confidence: {s.get('confidence', 0)*100:.0f}% | Urgency: {s.get('urgency','?')}\n"
+            )
+        if not watch_str:
+            watch_str = "  Nothing high-conviction yet — waiting for open\n"
+
+        open_slots = state["open_slots"]
+        msg = (
+            f"☀️ <b>Morning Digest — {datetime.now().strftime('%b %d')}</b>\n"
+            f"Market opens in ~30 min\n\n"
+            f"💼 Portfolio: <b>${pv:,.2f}</b>  |  💵 Cash: ${cash:,.2f}\n"
+            f"📦 Positions ({len(positions)}/{5 - open_slots + len(positions)}):\n{pos_str}\n\n"
+            f"🔭 <b>Watchlist for today:</b>\n{watch_str}\n"
+            f"🎰 Open slots: {open_slots}"
+        )
+        telegram.send(msg, urgent=True)
+        logger.info("Morning digest sent")
+    except Exception as e:
+        logger.error(f"Morning digest failed: {e}")
+        telegram.notify_error(f"Morning digest failed: {e}")
+
+
 def send_daily_summary():
-    """4pm ET daily summary."""
+    """4:05 PM ET — EOD summary with full day recap."""
     state = get_portfolio_state()
     summary = get_daily_summary()
-    telegram.notify_daily_summary(summary, state)
+
+    pv = state["portfolio_value"]
+    pnl = summary.get("total_pnl", 0) or 0
+    trades = summary.get("total_trades", 0) or 0
+    buys = summary.get("buys", 0) or 0
+    sells = summary.get("sells", 0) or 0
+    avg_pct = (summary.get("avg_pnl_pct", 0) or 0) * 100
+
+    positions = state["all_positions"]
+    pos_str = "\n".join(
+        f"  • {p['symbol']}: ${p['market_value']:,.0f} ({p['unrealized_plpc']*100:+.1f}%)"
+        for p in positions
+    ) or "  (none — fully flat)"
+
+    pnl_emoji = "📈" if pnl >= 0 else "📉"
+    msg = (
+        f"🌙 <b>End of Day — {datetime.now().strftime('%b %d')}</b>\n\n"
+        f"💼 Portfolio: <b>${pv:,.2f}</b>\n"
+        f"{pnl_emoji} Day P&L: <b>{'+' if pnl >= 0 else ''}${pnl:.2f}</b>\n"
+        f"🔄 Trades: {trades} ({buys} buys / {sells} sells)\n"
+        f"📊 Avg per trade: {avg_pct:+.1f}%\n\n"
+        f"📦 Overnight holds:\n{pos_str}"
+    )
+    telegram.send(msg, urgent=True)
+    logger.info("EOD summary sent")
 
 
 def main():
@@ -368,10 +495,13 @@ def main():
     # Crypto: configurable (default 30 min, runs 24/7)
     schedule.every(CRYPTO_SCAN_INTERVAL_MINUTES).minutes.do(run_crypto_cycle)
 
+    # Morning digest at 9:00 AM ET (30 min before open)
+    schedule.every().day.at("09:00").do(send_morning_digest)
+
     # EOD flatten: close all stock positions before close
     schedule.every().day.at(EOD_CLOSE_TIME).do(close_all_stock_positions)
 
-    # Daily summary at 4:05 PM ET
+    # EOD summary at 4:05 PM ET
     schedule.every().day.at("16:05").do(send_daily_summary)
 
     # Run immediately on start

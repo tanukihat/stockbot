@@ -95,6 +95,27 @@ def notify_startup(portfolio_state):
     send(msg)
 
 
+def notify_order_filled(symbol, side, qty, avg_price, pnl=None, pnl_pct=None):
+    """Notify when a pending order fills (e.g. a pre-queued stop/sell executes)."""
+    if side == "sell":
+        pnl_str = ""
+        if pnl is not None and pnl_pct is not None:
+            emoji = "💰" if pnl >= 0 else "🛑"
+            pnl_str = f"\nP&L: <b>{'+' if pnl >= 0 else ''}{pnl:.2f} ({pnl_pct*100:+.1f}%)</b>"
+        else:
+            emoji = "✅"
+        msg = (
+            f"{emoji} <b>SOLD: {symbol}</b>\n"
+            f"Qty: {qty} @ ${avg_price:.2f}{pnl_str}"
+        )
+    else:
+        msg = (
+            f"📈 <b>BOUGHT: {symbol}</b>\n"
+            f"Qty: {qty} @ ${avg_price:.2f}"
+        )
+    send(msg, urgent=True)
+
+
 def notify_trade_opened(trade: dict):
     sym = trade["symbol"]
     notional = trade.get("notional", 0)
@@ -115,7 +136,7 @@ def notify_trade_opened(trade: dict):
         f"🧠 Confidence: {conf*100:.0f}%\n"
         f"📝 {reason}"
     )
-    send(msg)
+    send(msg, urgent=True)
 
 
 def notify_trade_closed(symbol, action, pnl, pnl_pct, reason, exit_price=None):
@@ -130,7 +151,7 @@ def notify_trade_closed(symbol, action, pnl, pnl_pct, reason, exit_price=None):
         f"P&L: <b>{'+' if pnl >= 0 else ''}{pnl:.2f} ({pnl_pct*100:+.1f}%)</b>\n"
         f"Reason: {reason}{price_str}"
     )
-    send(msg, dedup_key=f"closed:{symbol}:{reason[:20]}")
+    send(msg, urgent=True, dedup_key=f"closed:{symbol}:{reason[:20]}")
 
 
 def notify_stop_loss(symbol, pnl, pnl_pct):
@@ -147,7 +168,7 @@ def notify_trailing_stop(symbol, pnl, pnl_pct, reason):
         f"P&L: <b>{'+' if pnl >= 0 else ''}{pnl:.2f} ({pnl_pct*100:+.1f}%)</b>\n"
         f"📝 {reason}"
     )
-    send(msg, dedup_key=f"trailing:{symbol}")
+    send(msg, urgent=True, dedup_key=f"trailing:{symbol}")
 
 
 def notify_scan_complete(symbols_checked, signals, trades_opened):
@@ -185,7 +206,7 @@ def notify_daily_summary(summary: dict, portfolio_state: dict):
         f"📉 Avg P&L per closed trade: {avg_pct:+.1f}%\n"
         f"⏰ {datetime.now().strftime('%Y-%m-%d %H:%M')} ET"
     )
-    send(msg)
+    send(msg, urgent=True)
 
 
 def notify_error(message: str):

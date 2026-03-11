@@ -111,6 +111,14 @@ def get_open_orders():
     return _get("/orders", params={"status": "open", "limit": 50})
 
 
+def get_filled_orders(since=None, limit=50):
+    """Return closed/filled orders, optionally filtered by a UTC timestamp string."""
+    params = {"status": "closed", "limit": limit}
+    if since:
+        params["after"] = since
+    return _get("/orders", params=params)
+
+
 def cancel_all_orders():
     return _delete("/orders")
 

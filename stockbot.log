@@ -1,29 +1,100 @@
-2026-03-10 22:22:51,377 [INFO] stockbot.main: 🚀 StockBot starting up...
-2026-03-10 22:22:51,378 [INFO] data.db: Database initialized at /home/tanuk/workspace/stockbot/data/stockbot.db
-2026-03-10 22:22:51,801 [INFO] stockbot.main: Startup audit of inherited positions...
-2026-03-10 22:22:51,801 [WARNING] stockbot.main: Inherited AMD at -16.2% — closing
-2026-03-10 22:22:51,811 [INFO] alpaca_client: Closing position: AMD — Inherited position past stop-loss
-2026-03-10 22:22:52,011 [INFO] alpaca_client: Position AMD already closed or close in progress (HTTP 403) — OK
-2026-03-10 22:22:54,953 [INFO] stockbot.main: Running initial cycle...
-2026-03-10 22:22:55,165 [INFO] stockbot.main: === Trading cycle start | stocks=False crypto=True ===
-2026-03-10 22:22:55,604 [INFO] alpaca_client: Closing position: AMD — STOP-LOSS triggered at -16.2%
-2026-03-10 22:22:55,806 [INFO] alpaca_client: Position AMD already closed or close in progress (HTTP 403) — OK
-2026-03-10 22:22:56,422 [INFO] stockbot.main: Closed AMD: STOP-LOSS triggered at -16.2% | PnL: -16.2%
-2026-03-10 22:22:56,837 [INFO] sentiment.aggregator: Scraping Reddit...
-2026-03-10 22:23:19,066 [INFO] sentiment.reddit: Reddit: found mentions for 14 symbols across 340 unique posts
-2026-03-10 22:23:19,066 [INFO] sentiment.aggregator: Aggregated sentiment for 10 symbols
-2026-03-10 22:23:19,067 [INFO] analysis.claude_analyzer: Pre-filter: dropped 3 low-signal symbols, sending 7 to model
-2026-03-10 22:23:19,067 [INFO] analysis.claude_analyzer: Sending 7 symbols to claude-3-haiku-20240307 for analysis...
-2026-03-10 22:23:19,067 [INFO] analysis.claude_analyzer: Using Anthropic model: claude-3-haiku-20240307
-2026-03-10 22:23:25,777 [INFO] httpx: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
-2026-03-10 22:23:25,796 [INFO] analysis.claude_analyzer: Model returned 7 signals
-2026-03-10 22:23:25,796 [INFO] analysis.claude_analyzer: 2 signals meet confidence threshold (0.65)
-2026-03-10 22:23:25,796 [INFO] stockbot.main: Signal: BUY GME conf=0.80 urgency=HIGH wsb=True — The strong bullish sentiment on Reddit, including mentions of potential short sq
-2026-03-10 22:23:25,796 [INFO] stockbot.main: Signal: SELL AMC conf=0.70 urgency=MEDIUM wsb=True — The strong bearish sentiment, including mentions of a potential meltdown, sugges
-2026-03-10 22:23:26,593 [INFO] stockbot.main: Skipping GME — market closed, stock orders not accepted
-2026-03-10 22:23:27,003 [INFO] notifications.telegram: Scan complete: 10 checked, 2 signals, no trades
-2026-03-10 22:23:27,003 [INFO] stockbot.main: === Cycle complete in 31.8s | 0 trades executed ===
-2026-03-10 22:23:27,003 [INFO] stockbot.main: Scheduler running. Ctrl+C to stop.
-es
-2026-03-10 22:23:27,003 [INFO] stockbot.main: === Cycle complete in 31.8s | 0 trades executed ===
-2026-03-10 22:23:27,003 [INFO] stockbot.main: Scheduler running. Ctrl+C to stop.
+2026-03-11 06:34:15,945 [INFO] stockbot.main: 🚀 StockBot starting up...
+2026-03-11 06:34:15,945 [INFO] data.db: Database initialized at /home/tanuk/workspace/stockbot/data/stockbot.db
+2026-03-11 06:34:16,386 [INFO] stockbot.main: Startup audit of inherited positions...
+2026-03-11 06:34:16,387 [WARNING] stockbot.main: Inherited AMD at -16.8% — closing
+2026-03-11 06:34:16,410 [INFO] alpaca_client: Closing position: AMD — Inherited position past stop-loss
+2026-03-11 06:34:16,608 [INFO] alpaca_client: Position AMD already closed or close in progress (HTTP 403) — OK
+2026-03-11 06:34:17,043 [INFO] stockbot.main: Running initial cycle...
+2026-03-11 06:34:17,252 [INFO] stockbot.main: === Trading cycle start | stocks=False crypto=True ===
+2026-03-11 06:34:17,950 [INFO] stockbot.main: AMD already has a pending sell order — skipping close/notify
+2026-03-11 06:34:18,350 [INFO] sentiment.aggregator: Scraping Reddit...
+2026-03-11 06:34:39,168 [INFO] sentiment.reddit: Reddit: found mentions for 12 symbols across 341 unique posts
+2026-03-11 06:34:39,169 [INFO] sentiment.aggregator: Aggregated sentiment for 9 symbols
+2026-03-11 06:34:39,169 [INFO] analysis.claude_analyzer: Pre-filter: dropped 3 low-signal symbols, sending 6 to model
+2026-03-11 06:34:39,169 [INFO] analysis.claude_analyzer: Sending 6 symbols to claude-3-haiku-20240307 for analysis...
+2026-03-11 06:34:39,169 [INFO] analysis.claude_analyzer: Using Anthropic model: claude-3-haiku-20240307
+2026-03-11 06:34:43,883 [INFO] httpx: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-03-11 06:34:43,914 [ERROR] analysis.claude_analyzer: Model returned invalid JSON: Expecting value: line 1 column 1 (char 0)
+Raw: Here are the trade signals based on the provided social sentiment data:
+
+[
+  {
+    "symbol": "GME",
+    "asset_class": "us_equity",
+    "action": "HOLD",
+    "confidence": 0.8,
+    "reasoning": "Strong bullish sentiment from r/Superstonk, with mentions of high short interest and FTD shares. However, the recent price action is bearish. Holding the current position seems prudent for now.",
+    "urgency": "MEDIUM",
+    "sector": "WSB_MEME",
+    "wsb_signal": true
+  },
+  {
+    "symbol": "SMCI",
+    
+2026-03-11 06:34:44,582 [INFO] notifications.telegram: Scan complete: 9 checked, 0 signals, no trades
+2026-03-11 06:34:44,582 [INFO] stockbot.main: === Cycle complete in 27.3s | 0 trades executed ===
+2026-03-11 06:34:44,582 [INFO] stockbot.main: Scheduler running. Ctrl+C to stop.
+2026-03-11 06:49:44,863 [INFO] stockbot.main: Market closed — skipping stock scan
+2026-03-11 07:04:45,099 [INFO] stockbot.main: === Trading cycle start | stocks=False crypto=True ===
+2026-03-11 07:04:45,800 [INFO] stockbot.main: AMD already has a pending sell order — skipping close/notify
+2026-03-11 07:04:46,232 [INFO] sentiment.aggregator: Scraping Reddit...
+2026-03-11 07:05:05,689 [WARNING] sentiment.reddit: Reddit fetch failed for r/wallstreetbetsnew: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/wallstreetbetsnew/hot.json?limit=50 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x7904510407d0>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-11 07:05:23,307 [WARNING] sentiment.reddit: Reddit fetch failed for r/Superstonk: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/Superstonk/hot.json?limit=30 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x790451040410>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-11 07:05:26,447 [INFO] sentiment.reddit: Reddit: found mentions for 11 symbols across 308 unique posts
+2026-03-11 07:05:26,447 [INFO] sentiment.aggregator: Aggregated sentiment for 8 symbols
+2026-03-11 07:05:26,447 [INFO] analysis.claude_analyzer: Pre-filter: dropped 3 low-signal symbols, sending 5 to model
+2026-03-11 07:05:26,447 [INFO] analysis.claude_analyzer: Sending 5 symbols to claude-3-haiku-20240307 for analysis...
+2026-03-11 07:05:26,447 [INFO] analysis.claude_analyzer: Using Anthropic model: claude-3-haiku-20240307
+2026-03-11 07:05:31,586 [INFO] httpx: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-03-11 07:05:31,600 [INFO] analysis.claude_analyzer: Model returned 5 signals
+2026-03-11 07:05:31,600 [INFO] analysis.claude_analyzer: 1 signals meet confidence threshold (0.65)
+2026-03-11 07:05:31,600 [INFO] stockbot.main: Signal: SELL AMC conf=0.80 urgency=HIGH wsb=True — The social sentiment for AMC is strongly bearish, with a raw sentiment score of 
+2026-03-11 07:05:32,294 [INFO] notifications.telegram: Scan complete: 8 checked, 1 signals, no trades
+2026-03-11 07:05:32,294 [INFO] stockbot.main: === Cycle complete in 47.2s | 0 trades executed ===
+2026-03-11 07:05:32,501 [INFO] stockbot.main: Market closed — skipping stock scan
+2026-03-11 07:20:32,730 [INFO] stockbot.main: Market closed — skipping stock scan
+2026-03-11 07:35:32,939 [INFO] stockbot.main: === Trading cycle start | stocks=False crypto=True ===
+2026-03-11 07:35:33,587 [INFO] stockbot.main: AMD already has a pending sell order — skipping close/notify
+2026-03-11 07:35:33,996 [INFO] sentiment.aggregator: Scraping Reddit...
+2026-03-11 07:36:03,891 [WARNING] sentiment.reddit: Reddit fetch failed for r/StockMarket: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/StockMarket/hot.json?limit=20 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x790451042710>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-11 07:36:04,492 [INFO] sentiment.reddit: Reddit: found mentions for 13 symbols across 320 unique posts
+2026-03-11 07:36:04,492 [INFO] sentiment.aggregator: Aggregated sentiment for 11 symbols
+2026-03-11 07:36:04,492 [INFO] analysis.claude_analyzer: Pre-filter: dropped 4 low-signal symbols, sending 7 to model
+2026-03-11 07:36:04,492 [INFO] analysis.claude_analyzer: Sending 7 symbols to claude-3-haiku-20240307 for analysis...
+2026-03-11 07:36:04,493 [INFO] analysis.claude_analyzer: Using Anthropic model: claude-3-haiku-20240307
+2026-03-11 07:36:12,524 [INFO] httpx: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-03-11 07:36:12,526 [ERROR] analysis.claude_analyzer: Model returned invalid JSON: Expecting value: line 1 column 1 (char 0)
+Raw: Here are the trade signals based on the provided social sentiment data:
+
+[
+  {
+    "symbol": "GME",
+    "asset_class": "us_equity",
+    "action": "HOLD",
+    "confidence": 0.7,
+    "reasoning": "Strong bullish sentiment from the r/Superstonk community, with high engagement and discussion around FTDs, DRS, and potential market events. However, the overall raw sentiment score is slightly bearish, indicating some mixed opinions.",
+    "urgency": "MEDIUM",
+    "sector": "WSB_MEME",
+    "wsb_signal":
+2026-03-11 07:36:13,219 [INFO] notifications.telegram: Scan complete: 11 checked, 0 signals, no trades
+2026-03-11 07:36:13,219 [INFO] stockbot.main: === Cycle complete in 40.3s | 0 trades executed ===
+2026-03-11 07:36:13,428 [INFO] stockbot.main: Market closed — skipping stock scan
+2026-03-11 07:51:13,662 [INFO] stockbot.main: Market closed — skipping stock scan
+rstonk community, with high engagement and discussion around FTDs, DRS, and potential market events. However, the overall raw sentiment score is slightly bearish, indicating some mixed opinions.",
+    "urgency": "MEDIUM",
+    "sector": "WSB_MEME",
+    "wsb_signal":
+2026-03-11 07:36:13,219 [INFO] notifications.telegram: Scan complete: 11 checked, 0 signals, no trades
+2026-03-11 07:36:13,219 [INFO] stockbot.main: === Cycle complete in 40.3s | 0 trades executed ===
+2026-03-11 07:36:13,428 [INFO] stockbot.main: Market closed — skipping stock scan
+2026-03-11 07:51:13,662 [INFO] stockbot.main: Market closed — skipping stock scan
+2026-03-11 10:55:41,321 [INFO] stockbot.main: 🚀 StockBot starting up...
+2026-03-11 10:55:41,322 [INFO] data.db: Database initialized at /home/tanuk/workspace/stockbot/data/stockbot.db
+2026-03-11 10:55:41,766 [INFO] stockbot.main: Startup audit of inherited positions...
+2026-03-11 10:55:44,773 [INFO] stockbot.main: Running initial cycle...
+2026-03-11 10:55:44,983 [INFO] stockbot.main: === Trading cycle start | stocks=True crypto=True ===
+2026-03-11 10:55:45,189 [INFO] stockbot.main: Order fill tracker seeded with 2 existing fills
+2026-03-11 10:55:46,354 [INFO] sentiment.aggregator: Scraping Reddit...
+2026-03-11 10:55:58,942 [WARNING] sentiment.reddit: Comment fetch failed for 1rpfd9i: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/wallstreetbets/comments/1rpfd9i.json?limit=50&depth=1&sort=top (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x7467ebaa8cd0>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-11 10:56:17,570 [INFO] sentiment.reddit: Reddit: found mentions for 12 symbols across 340 unique posts
+2026-03-11 10:56:17,570 [INFO] sentiment.aggregator: Scraping StockTwits...
