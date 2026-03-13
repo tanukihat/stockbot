@@ -36,10 +36,10 @@ MAX_POSITIONS = 5
 MIN_POSITIONS = 3          # Bot will actively seek trades if below this threshold
 
 # --- Risk management ---
-STOP_LOSS_PCT = 0.05          # Scalper exits fast at -5% (was 8% — too forgiving)
-TAKE_PROFIT_PCT = 0.07        # Take 7% and run
-TRAILING_STOP_PCT = 0.02      # Lock in gains: fire if drops 2% from peak
-TRAILING_ACTIVATE_PCT = 0.03  # Activate trailing stop after 3% gain (was 5%)
+STOP_LOSS_PCT = 0.05          # Scalper exits fast at -5%
+TAKE_PROFIT_PCT = 0.08        # Hard ceiling — sell at +8% no matter what
+TRAILING_STOP_PCT = 0.02      # (unused in floor mode, kept for reference)
+TRAILING_ACTIVATE_PCT = 0.05  # Once +5% is hit, that becomes the profit floor
 MAX_POSITION_PCT = 0.22       # Max 22% of portfolio in a single position
 TARGET_DEPLOYED_PCT = 0.80    # Target ~80% of portfolio deployed (not sitting in cash)
 EOD_CLOSE_STOCKS = True       # Close all stock positions by 3:50 PM (day trader mode)

@@ -36,6 +36,7 @@ logging.basicConfig(
         logging.StreamHandler(sys.stdout),
         logging.FileHandler("stockbot.log"),
     ],
+    force=True,  # reset handlers on each start — prevents duplicate log lines
 )
 logger = logging.getLogger("stockbot.main")
 

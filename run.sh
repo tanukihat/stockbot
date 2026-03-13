@@ -1,11 +1,26 @@
 #!/bin/bash
-# StockBot launcher — prevents duplicate instances
-PIDFILE="/tmp/stockbot.pid"
-if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
-    echo "StockBot already running (PID $(cat $PIDFILE)). Exiting."
-    exit 1
+# StockBot launcher — enforces single instance via PID file
+cd "$(dirname "$0")"
+
+PIDFILE="stockbot.pid"
+
+# Kill any existing instance
+if [ -f "$PIDFILE" ]; then
+    OLD_PID=$(cat "$PIDFILE")
+    if kill -0 "$OLD_PID" 2>/dev/null; then
+        echo "Stopping existing instance (PID $OLD_PID)..."
+        kill "$OLD_PID"
+        sleep 2
+    fi
+    rm -f "$PIDFILE"
 fi
-cd ~/workspace/stockbot
-echo $$ > "$PIDFILE"
-trap "rm -f $PIDFILE" EXIT
-python3 main.py
+
+# Also nuke any strays just in case
+pgrep -f "python3 main.py" | xargs -r kill 2>/dev/null
+sleep 1
+
+# Start fresh
+echo "Starting StockBot..."
+python3 main.py 2>/dev/null &
+echo $! > "$PIDFILE"
+echo "Started PID $(cat $PIDFILE)"

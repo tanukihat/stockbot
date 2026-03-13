@@ -130,21 +130,22 @@ def check_stop_and_take_profit(state):
             close_symbols.add(sym)
             continue
 
-        # --- Trailing stop ---
-        # Update the stored peak if we're at a new high
+        # --- Profit floor (trailing) ---
+        # Once a position hits +TRAILING_ACTIVATE_PCT, that level becomes the floor.
+        # If it rises further and then drops back to the floor, we sell.
+        # Hard ceiling is handled above by TAKE_PROFIT_PCT.
         peak = get_position_peak(sym)
         if peak is None or pct > peak:
             update_position_peak(sym, pct)
             peak = pct
 
-        # Fire trailing stop if peak activated threshold and we've since dropped enough
         if (peak is not None
                 and peak >= TRAILING_ACTIVATE_PCT
-                and pct <= peak - TRAILING_STOP_PCT):
+                and pct <= TRAILING_ACTIVATE_PCT):
             to_close.append({
                 "symbol": sym,
                 "asset_class": pos["asset_class"],
-                "reason": f"TRAILING-STOP: peaked at {peak*100:+.1f}%, now {pct*100:+.1f}%",
+                "reason": f"PROFIT-FLOOR: peaked at {peak*100:+.1f}%, dropped back to floor ({TRAILING_ACTIVATE_PCT*100:.0f}%)",
                 "pnl_pct": pct,
             })
             close_symbols.add(sym)
