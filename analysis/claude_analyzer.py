@@ -20,8 +20,9 @@ _anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # Pre-filter: don't waste API tokens on clearly low-signal symbols
 # Must have either enough mentions OR a non-trivial sentiment score
-PRE_FILTER_MIN_MENTIONS = 4
-PRE_FILTER_MIN_SENTIMENT = 0.15  # |raw_sentiment| threshold when mentions are low
+PRE_FILTER_MIN_MENTIONS = 6       # raised: fewer, higher-signal symbols per call
+PRE_FILTER_MIN_SENTIMENT = 0.20  # |raw_sentiment| threshold when mentions are low
+MAX_SYMBOLS_PER_CALL = 20        # batch cap — keeps response within token limits
 
 SYSTEM_PROMPT = """You are an autonomous AI trading analyst for a high-frequency paper trading bot.
 Your job is to analyze social sentiment data — primarily from Reddit's r/wallstreetbets and similar
@@ -121,34 +122,59 @@ def _call_model(system, user_content, max_tokens=2000, model=None):
 
 def _parse_signals(raw):
     """
-    Extract and parse a JSON array from model output.
-    Handles: markdown fences, preamble text, trailing commentary.
+    Robustly extract trade signals from model output.
+    Handles: markdown fences, preamble text, trailing commentary, truncated responses.
+    Extracts each complete JSON object individually so a truncated response doesn't
+    nuke the signals that did come through cleanly.
     """
+    import re
     text = raw.strip()
 
-    # Strip markdown code fences
+    # Strip markdown fences
     if "```" in text:
         parts = text.split("```")
         for part in parts:
             part = part.strip()
             if part.startswith("json"):
-                part = part[4:]
-            part = part.strip()
+                part = part[4:].strip()
             if part.startswith("[") or part.startswith("{"):
                 text = part
                 break
 
-    # If there's preamble text before the JSON array, slice from first '['
+    # First try: parse the whole thing (fast path for clean responses)
     bracket = text.find("[")
-    if bracket > 0:
-        text = text[bracket:]
+    if bracket >= 0:
+        candidate = text[bracket:]
+        last = candidate.rfind("]")
+        if last != -1:
+            try:
+                return json.loads(candidate[:last + 1].strip())
+            except json.JSONDecodeError:
+                pass  # fall through to object-by-object extraction
 
-    # Trim anything after the closing ']'
-    last = text.rfind("]")
-    if last != -1:
-        text = text[:last + 1]
+    # Fallback: grab every complete JSON object — survives truncation
+    signals = []
+    for m in re.finditer(r'\{', text):
+        start = m.start()
+        depth, i = 0, start
+        while i < len(text):
+            if text[i] == '{':
+                depth += 1
+            elif text[i] == '}':
+                depth -= 1
+                if depth == 0:
+                    try:
+                        obj = json.loads(text[start:i + 1])
+                        if 'symbol' in obj and 'action' in obj:
+                            signals.append(obj)
+                    except json.JSONDecodeError:
+                        pass
+                    break
+            i += 1
+    if signals:
+        return signals
 
-    return json.loads(text.strip())
+    raise json.JSONDecodeError("No valid signal objects found", text, 0)
 
 
 def analyze_sentiment_batch(aggregated_data: dict) -> list:
@@ -173,30 +199,45 @@ def analyze_sentiment_batch(aggregated_data: dict) -> list:
         logger.info("Pre-filter: nothing passed, skipping model call")
         return []
 
-    # --- Build prompt ---
-    symbols_text = []
-    for sym, data in filtered.items():
-        top_score = data.get("top_reddit_score", 0)
-        score_str = f" | Top Reddit post score: {top_score:,}" if top_score > 0 else ""
-        symbols_text.append(
-            f"=== {sym} ({data['asset_class']}) ===\n"
-            f"Mentions: {data['mention_count']} (Reddit: {data['reddit_mention_count']}, "
-            f"StockTwits: {data['stocktwits_message_count']}){score_str}\n"
-            f"Raw sentiment score: {data['raw_sentiment']:.2f} (-1=very bearish, +1=very bullish)\n"
-            f"Social context:\n{data['context']}\n"
+    # --- Build prompt items ---
+    def _build_prompt_for(batch: dict) -> str:
+        items = []
+        for sym, data in batch.items():
+            top_score = data.get("top_reddit_score", 0)
+            score_str = f" | Top Reddit post score: {top_score:,}" if top_score > 0 else ""
+            items.append(
+                f"=== {sym} ({data['asset_class']}) ===\n"
+                f"Mentions: {data['mention_count']} (Reddit: {data['reddit_mention_count']}, "
+                f"StockTwits: {data['stocktwits_message_count']}){score_str}\n"
+                f"Raw sentiment score: {data['raw_sentiment']:.2f} (-1=very bearish, +1=very bullish)\n"
+                f"Social context:\n{data['context']}\n"
+            )
+        return (
+            "Analyze the following social sentiment data and provide trade signals.\n"
+            "Current positions are tracked separately — focus only on signal quality.\n\n"
+            + "\n".join(items)
         )
 
-    user_prompt = (
-        "Analyze the following social sentiment data and provide trade signals.\n"
-        "Current positions are tracked separately — focus only on signal quality.\n\n"
-        + "\n".join(symbols_text)
-    )
+    # Split into batches if needed
+    filtered_items = list(filtered.items())
+    batches = [
+        dict(filtered_items[i:i + MAX_SYMBOLS_PER_CALL])
+        for i in range(0, len(filtered_items), MAX_SYMBOLS_PER_CALL)
+    ]
 
     try:
-        logger.info(f"Sending {len(filtered)} symbols to {ANALYSIS_MODEL} for analysis...")
-        raw = _call_model(SYSTEM_PROMPT, user_prompt)
-        signals = _parse_signals(raw)
-        logger.info(f"Model returned {len(signals)} signals")
+        all_signals = []
+        for batch_num, batch in enumerate(batches):
+            user_prompt = _build_prompt_for(batch)
+            max_tok = min(4096, max(2000, len(batch) * 130))
+            logger.info(f"Sending batch {batch_num + 1}/{len(batches)} ({len(batch)} symbols) to {ANALYSIS_MODEL}...")
+            raw = _call_model(SYSTEM_PROMPT, user_prompt, max_tokens=max_tok)
+            batch_signals = _parse_signals(raw)
+            logger.info(f"Batch {batch_num + 1}: {len(batch_signals)} signals")
+            all_signals.extend(batch_signals)
+
+        signals = all_signals
+        logger.info(f"Model returned {len(signals)} signals total")
 
         strong = [s for s in signals if s.get("confidence", 0) >= MIN_SENTIMENT_SCORE]
         logger.info(f"{len(strong)} signals meet confidence threshold ({MIN_SENTIMENT_SCORE})")

@@ -158,10 +158,12 @@ def place_bracket_order(symbol, side, notional, take_profit_pct, stop_loss_pct, 
         logger.error(f"Can't get price for {symbol}")
         return None
 
-    qty = round(notional / price, 6)
+    # Bracket orders require whole shares — floor to avoid 422 fractional-qty errors
+    qty = int(notional / price)
     if qty <= 0:
-        logger.error(f"Calculated qty={qty} for {symbol}, skipping")
-        return None
+        logger.warning(f"Bracket order qty=0 for {symbol} (notional=${notional:.0f}, price=${price:.2f}) — falling back to notional market order")
+        return place_market_order(symbol, side, notional=notional, asset_class=asset_class)
+
 
     if side == "buy":
         tp_price = round(price * (1 + take_profit_pct), 2)

@@ -3652,3 +3652,255 @@ Raw: [
 2026-03-13 08:31:18,871 [INFO] notifications.telegram: Scan complete: 16 checked, 4 signals, no trades
 2026-03-13 08:31:18,871 [INFO] stockbot.main: === Cycle complete in 41.0s | 0 trades executed ===
 2026-03-13 08:31:18,871 [INFO] stockbot.main: Scheduler running. Ctrl+C to stop.
+2026-03-13 08:45:49,100 [INFO] stockbot.main: Market closed — skipping stock scan
+2026-03-13 09:00:19,114 [INFO] stockbot.main: Generating morning digest...
+2026-03-13 09:00:19,565 [INFO] sentiment.aggregator: Scraping Reddit...
+2026-03-13 09:00:35,801 [WARNING] sentiment.reddit: Comment fetch failed for 1rop7t0: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/wallstreetbets/comments/1rop7t0.json?limit=50&depth=1&sort=top (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x78d7b371cb90>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:00:51,944 [WARNING] sentiment.reddit: Reddit fetch failed for r/wallstreetbetsnew: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/wallstreetbetsnew/new.json?limit=50 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x78d7b371ce10>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:01:09,375 [WARNING] sentiment.reddit: Reddit fetch failed for r/CryptoCurrency: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/CryptoCurrency/hot.json?limit=25 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x78d7b371d450>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:01:11,439 [INFO] sentiment.reddit: Reddit: found mentions for 15 symbols across 309 unique posts
+2026-03-13 09:01:11,439 [INFO] sentiment.aggregator: Scraping StockTwits...
+2026-03-13 09:01:31,253 [INFO] sentiment.stocktwits: StockTwits: got data for 33 symbols
+2026-03-13 09:01:31,254 [INFO] sentiment.aggregator: Aggregated sentiment for 33 symbols
+2026-03-13 09:01:31,254 [INFO] analysis.claude_analyzer: Sending 33 symbols to claude-3-haiku-20240307 for analysis...
+2026-03-13 09:01:31,254 [INFO] analysis.claude_analyzer: Using Anthropic model: claude-3-haiku-20240307
+2026-03-13 09:01:47,631 [INFO] httpx: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-03-13 09:01:47,651 [ERROR] analysis.claude_analyzer: Model returned invalid JSON: Unterminated string starting at: line 187 column 18 (char 5916)
+Raw: Here are the trade signals based on the provided social sentiment data:
+
+[
+  {
+    "symbol": "AI",
+    "asset_class": "us_equity",
+    "action": "SELL",
+    "confidence": 0.7,
+    "reasoning": "Bearish signals from DragonAlgo indicate downside momentum in AI, with put options favored.",
+    "urgency": "HIGH",
+    "sector": "AI",
+    "wsb_signal": false
+  },
+  {
+    "symbol": "AMC",
+    "asset_class": "us_equity",
+    "action": "BUY",
+    "confidence": 0.8,
+    "reasoning": "Strong bullish consen
+2026-03-13 09:01:48,279 [INFO] stockbot.main: Morning digest sent
+2026-03-13 09:02:18,492 [INFO] stockbot.main: === Trading cycle start | stocks=False crypto=True ===
+2026-03-13 09:02:19,877 [INFO] stockbot.main: Positions: 2 (min=3) | Deployed: 54% — seeking trades
+2026-03-13 09:02:19,878 [INFO] sentiment.aggregator: Scraping Reddit...
+2026-03-13 09:02:43,972 [WARNING] sentiment.reddit: Reddit fetch failed for r/thetagang: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/thetagang/hot.json?limit=30 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x78d7b371fc50>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:03:00,654 [WARNING] sentiment.reddit: Reddit fetch failed for r/CryptoCurrency: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/CryptoCurrency/hot.json?limit=25 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x78d7b371f9d0>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:03:02,669 [INFO] sentiment.reddit: Reddit: found mentions for 15 symbols across 281 unique posts
+2026-03-13 09:03:02,669 [INFO] sentiment.aggregator: Aggregated sentiment for 13 symbols
+2026-03-13 09:03:02,670 [INFO] analysis.claude_analyzer: Pre-filter: dropped 3 low-signal symbols, sending 10 to model
+2026-03-13 09:03:02,670 [INFO] analysis.claude_analyzer: Sending 10 symbols to claude-3-haiku-20240307 for analysis...
+2026-03-13 09:03:02,670 [INFO] analysis.claude_analyzer: Using Anthropic model: claude-3-haiku-20240307
+2026-03-13 09:03:07,728 [INFO] anthropic._base_client: Retrying request to /v1/messages in 0.430221 seconds
+2026-03-13 09:03:13,216 [INFO] anthropic._base_client: Retrying request to /v1/messages in 0.901778 seconds
+2026-03-13 09:03:19,164 [ERROR] analysis.claude_analyzer: Analysis failed: Connection error.
+2026-03-13 09:03:19,828 [INFO] notifications.telegram: Scan complete: 13 checked, 0 signals, no trades
+2026-03-13 09:03:19,828 [INFO] stockbot.main: === Cycle complete in 61.3s | 0 trades executed ===
+2026-03-13 09:03:20,051 [INFO] stockbot.main: Market closed — skipping stock scan
+2026-03-13 09:18:20,325 [INFO] stockbot.main: Market closed — skipping stock scan
+2026-03-13 09:33:20,811 [INFO] stockbot.main: === Trading cycle start | stocks=True crypto=True ===
+2026-03-13 09:33:22,108 [INFO] stockbot.main: Positions: 2 (min=3) | Deployed: 54% — seeking trades
+2026-03-13 09:33:22,109 [INFO] sentiment.aggregator: Scraping Reddit...
+2026-03-13 09:33:49,920 [WARNING] sentiment.reddit: Reddit fetch failed for r/investing: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/investing/hot.json?limit=20 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x78d7b3414910>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:33:54,351 [INFO] sentiment.reddit: Reddit: found mentions for 17 symbols across 316 unique posts
+2026-03-13 09:33:54,351 [INFO] sentiment.aggregator: Scraping StockTwits...
+2026-03-13 09:34:14,760 [INFO] sentiment.stocktwits: StockTwits: got data for 33 symbols
+2026-03-13 09:34:14,762 [INFO] sentiment.aggregator: Aggregated sentiment for 35 symbols
+2026-03-13 09:34:14,763 [INFO] analysis.claude_analyzer: Sending 35 symbols to claude-3-haiku-20240307 for analysis...
+2026-03-13 09:34:14,763 [INFO] analysis.claude_analyzer: Using Anthropic model: claude-3-haiku-20240307
+2026-03-13 09:34:29,174 [INFO] httpx: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-03-13 09:34:29,195 [ERROR] analysis.claude_analyzer: Model returned invalid JSON: Expecting value: line 191 column 5 (char 5850)
+Raw: Here are the trade signals based on the provided social sentiment data:
+
+[
+  {
+    "symbol": "AI",
+    "asset_class": "us_equity",
+    "action": "SELL",
+    "confidence": 0.7,
+    "reasoning": "Bearish sentiment signals from StockTwits, including a put option trade suggestion and concerns about the AI sector in general.",
+    "urgency": "HIGH",
+    "sector": "AI",
+    "wsb_signal": false
+  },
+  {
+    "symbol": "AMC",
+    "asset_class": "us_equity",
+    "action": "SKIP",
+    "confidence": 0.5,
+  
+2026-03-13 09:34:29,835 [INFO] notifications.telegram: Scan complete: 35 checked, 0 signals, no trades
+2026-03-13 09:34:29,835 [INFO] stockbot.main: === Cycle complete in 69.0s | 0 trades executed ===
+2026-03-13 09:49:30,096 [INFO] stockbot.main: === Trading cycle start | stocks=True crypto=True ===
+2026-03-13 09:49:31,420 [INFO] stockbot.main: Positions: 2 (min=3) | Deployed: 54% — seeking trades
+2026-03-13 09:49:31,421 [INFO] sentiment.aggregator: Scraping Reddit...
+2026-03-13 09:49:43,417 [WARNING] sentiment.reddit: Comment fetch failed for 1rsb64m: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/wallstreetbets/comments/1rsb64m.json?limit=50&depth=1&sort=top (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x78d7b3415810>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:49:54,691 [WARNING] sentiment.reddit: Comment fetch failed for 1rpkkha: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/wallstreetbets/comments/1rpkkha.json?limit=50&depth=1&sort=top (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x78d7b3415d10>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:50:16,592 [WARNING] sentiment.reddit: Reddit fetch failed for r/options: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/options/hot.json?limit=30 (Caused by NewConnectionError("HTTPSConnection(host='www.reddit.com', port=443): Failed to establish a new connection: [Errno 101] Network is unreachable"))
+2026-03-13 09:50:24,033 [INFO] sentiment.reddit: Reddit: found mentions for 14 symbols across 307 unique posts
+2026-03-13 09:50:24,034 [INFO] sentiment.aggregator: Scraping StockTwits...
+2026-03-13 09:50:43,882 [INFO] sentiment.stocktwits: StockTwits: got data for 33 symbols
+2026-03-13 09:50:43,884 [INFO] sentiment.aggregator: Aggregated sentiment for 35 symbols
+2026-03-13 09:50:43,885 [INFO] analysis.claude_analyzer: Sending 35 symbols to claude-3-haiku-20240307 for analysis...
+2026-03-13 09:50:43,885 [INFO] analysis.claude_analyzer: Using Anthropic model: claude-3-haiku-20240307
+2026-03-13 09:50:59,140 [INFO] httpx: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-03-13 09:50:59,141 [ERROR] analysis.claude_analyzer: Model returned invalid JSON: Expecting property name enclosed in double quotes: line 179 column 20 (char 6142)
+Raw: Based on the provided social sentiment data, here are the trade signals:
+
+[
+  {
+    "symbol": "AI",
+    "asset_class": "us_equity",
+    "action": "HOLD",
+    "confidence": 0.4,
+    "reasoning": "Sentiment is mixed, with some bearish signals from DragonAlgo options flow but also some bullish chatter. Given the volatility, a hold signal is appropriate.",
+    "urgency": "MEDIUM",
+    "sector": "AI",
+    "wsb_signal": false
+  },
+  {
+    "symbol": "AMC",
+    "asset_class": "us_equity",
+    "action": 
+2026-03-13 09:50:59,812 [INFO] notifications.telegram: Scan complete: 35 checked, 0 signals, no trades
+2026-03-13 09:50:59,813 [INFO] stockbot.main: === Cycle complete in 89.7s | 0 trades executed ===
+2026-03-13 09:51:22,859 [INFO] stockbot.main: 🚀 StockBot starting up...
+2026-03-13 09:51:22,860 [INFO] data.db: Database initialized at /home/tanuk/workspace/stockbot/data/stockbot.db
+2026-03-13 09:51:23,322 [INFO] stockbot.main: Startup audit of inherited positions...
+2026-03-13 09:51:25,661 [INFO] stockbot.main: Running initial cycle...
+2026-03-13 09:51:25,864 [INFO] stockbot.main: === Trading cycle start | stocks=True crypto=True ===
+2026-03-13 09:51:26,071 [INFO] stockbot.main: Order fill tracker seeded with 2 existing fills
+2026-03-13 09:51:27,198 [INFO] stockbot.main: Positions: 2 (min=3) | Deployed: 54% — seeking trades
+2026-03-13 09:51:27,198 [INFO] sentiment.aggregator: Scraping Reddit...
+2026-03-13 09:51:51,036 [WARNING] sentiment.reddit: Reddit fetch failed for r/thetagang: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/thetagang/hot.json?limit=30 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x7541c7ca8550>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:52:01,696 [WARNING] sentiment.reddit: Reddit fetch failed for r/options: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/options/hot.json?limit=30 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x7541c7ca8f50>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:52:08,942 [INFO] sentiment.reddit: Reddit: found mentions for 14 symbols across 277 unique posts
+2026-03-13 09:52:08,942 [INFO] sentiment.aggregator: Scraping StockTwits...
+2026-03-13 09:52:29,970 [INFO] sentiment.stocktwits: StockTwits: got data for 33 symbols
+2026-03-13 09:52:29,972 [INFO] sentiment.aggregator: Aggregated sentiment for 35 symbols
+2026-03-13 09:52:29,972 [INFO] analysis.claude_analyzer: Sending 35 symbols to claude-3-haiku-20240307 for analysis...
+2026-03-13 09:52:29,973 [INFO] analysis.claude_analyzer: Using Anthropic model: claude-3-haiku-20240307
+2026-03-13 09:52:30,276 [INFO] httpx: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 400 Bad Request"
+2026-03-13 09:52:30,294 [ERROR] analysis.claude_analyzer: Analysis failed: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'max_tokens: 5250 > 4096, which is the maximum allowed number of output tokens for claude-3-haiku-20240307'}, 'request_id': 'req_011CZ1ByCybqKqo4vjBmAhGr'}
+2026-03-13 09:52:31,060 [INFO] notifications.telegram: Scan complete: 35 checked, 0 signals, no trades
+2026-03-13 09:52:31,060 [INFO] stockbot.main: === Cycle complete in 65.2s | 0 trades executed ===
+2026-03-13 09:52:31,061 [INFO] stockbot.main: Scheduler running. Ctrl+C to stop.
+2026-03-13 09:53:58,778 [INFO] stockbot.main: 🚀 StockBot starting up...
+2026-03-13 09:53:58,779 [INFO] data.db: Database initialized at /home/tanuk/workspace/stockbot/data/stockbot.db
+2026-03-13 09:53:59,254 [INFO] stockbot.main: Startup audit of inherited positions...
+2026-03-13 09:54:01,639 [INFO] stockbot.main: Running initial cycle...
+2026-03-13 09:54:01,856 [INFO] stockbot.main: === Trading cycle start | stocks=True crypto=True ===
+2026-03-13 09:54:02,083 [INFO] stockbot.main: Order fill tracker seeded with 2 existing fills
+2026-03-13 09:54:03,234 [INFO] stockbot.main: Positions: 2 (min=3) | Deployed: 54% — seeking trades
+2026-03-13 09:54:03,234 [INFO] sentiment.aggregator: Scraping Reddit...
+2026-03-13 09:54:19,167 [WARNING] sentiment.reddit: Comment fetch failed for 1rpg0mb: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/wallstreetbets/comments/1rpg0mb.json?limit=50&depth=1&sort=top (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x72c333eb8f50>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:54:34,305 [WARNING] sentiment.reddit: Reddit fetch failed for r/wallstreetbetsnew: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/wallstreetbetsnew/hot.json?limit=50 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x72c333eb8910>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:54:46,142 [INFO] sentiment.reddit: Reddit: found mentions for 17 symbols across 335 unique posts
+2026-03-13 09:54:46,143 [INFO] sentiment.aggregator: Scraping StockTwits...
+2026-03-13 09:55:06,300 [INFO] sentiment.stocktwits: StockTwits: got data for 33 symbols
+2026-03-13 09:55:06,302 [INFO] sentiment.aggregator: Aggregated sentiment for 35 symbols
+2026-03-13 09:55:06,302 [INFO] analysis.claude_analyzer: Sending batch 1/2 (20 symbols) to claude-3-haiku-20240307...
+2026-03-13 09:55:06,302 [INFO] analysis.claude_analyzer: Using Anthropic model: claude-3-haiku-20240307
+2026-03-13 09:55:22,672 [INFO] httpx: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-03-13 09:55:22,710 [INFO] analysis.claude_analyzer: Batch 1: 18 signals
+2026-03-13 09:55:22,710 [INFO] analysis.claude_analyzer: Sending batch 2/2 (15 symbols) to claude-3-haiku-20240307...
+2026-03-13 09:55:22,710 [INFO] analysis.claude_analyzer: Using Anthropic model: claude-3-haiku-20240307
+2026-03-13 09:55:36,005 [INFO] httpx: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-03-13 09:55:36,006 [INFO] analysis.claude_analyzer: Batch 2: 15 signals
+2026-03-13 09:55:36,006 [INFO] analysis.claude_analyzer: Model returned 33 signals total
+2026-03-13 09:55:36,006 [INFO] analysis.claude_analyzer: 11 signals meet confidence threshold (0.65)
+2026-03-13 09:55:36,006 [INFO] stockbot.main: Signal: BUY BBAI conf=0.80 urgency=HIGH wsb=False — Strong bullish sentiment on StockTwits, with comments indicating the stock is tr
+2026-03-13 09:55:36,006 [INFO] stockbot.main: Signal: BUY NVDA conf=0.80 urgency=HIGH wsb=True — Positive WSB sentiment, with mentions of the stock's strong performance and pote
+2026-03-13 09:55:36,006 [INFO] stockbot.main: Signal: BUY MP conf=0.80 urgency=HIGH wsb=True — The social sentiment for MP is strongly bullish, with positive news around poten
+2026-03-13 09:55:36,006 [INFO] stockbot.main: Signal: SELL AI conf=0.70 urgency=MEDIUM wsb=False — Bearish sentiment from multiple StockTwits commentators, including a DragonAlgo 
+2026-03-13 09:55:36,006 [INFO] stockbot.main: Signal: BUY HON conf=0.70 urgency=MEDIUM wsb=False — Bullish signals from StockTwits, including a detailed options trading plan. The 
+2026-03-13 09:55:36,006 [INFO] stockbot.main: Signal: BUY LTHM conf=0.70 urgency=MEDIUM wsb=False — Bullish sentiment across multiple StockTwits comments, with mentions of potentia
+2026-03-13 09:55:36,006 [INFO] stockbot.main: Signal: BUY UUUU conf=0.70 urgency=MEDIUM wsb=False — Bullish sentiment on StockTwits, including a DragonAlgo signal for a CALL option
+2026-03-13 09:55:36,006 [INFO] stockbot.main: Signal: BUY ALB conf=0.70 urgency=MEDIUM wsb=False — Bullish sentiment on StockTwits, with comments highlighting the company's positi
+2026-03-13 09:55:36,006 [INFO] stockbot.main: Signal: BUY QUBT conf=0.70 urgency=MEDIUM wsb=False — Positive sentiment, including a DragonAlgo signal for a CALL option. Commentator
+2026-03-13 09:55:36,006 [INFO] stockbot.main: Signal: BUY PLTM conf=0.70 urgency=MEDIUM wsb=False — The social sentiment for PLTM is moderately bullish, with positive technical ind
+2026-03-13 09:55:36,006 [INFO] stockbot.main: Signal: BUY IBM conf=0.70 urgency=MEDIUM wsb=True — The social sentiment for IBM is bullish, with positive developments around the c
+2026-03-13 09:55:37,099 [INFO] trading.executor: BUY BBAI | $18572 | price ~$4.14 | confidence=0.80
+2026-03-13 09:55:37,307 [INFO] alpaca_client: Bracket order: buy BBAI qty=4480.4767 @ ~$4.14 TP=$4.48 SL=$3.94
+2026-03-13 09:55:37,546 [ERROR] trading.executor: Buy execution failed for BBAI: 422 Client Error: Unprocessable Entity for url: https://paper-api.alpaca.markets/v2/orders
+2026-03-13 09:55:39,159 [INFO] trading.executor: BUY NVDA | $18571 | price ~$185.58 | confidence=0.80
+2026-03-13 09:55:39,384 [INFO] alpaca_client: Bracket order: buy NVDA qty=100.0695 @ ~$185.58 TP=$200.43 SL=$176.30
+2026-03-13 09:55:39,625 [ERROR] trading.executor: Buy execution failed for NVDA: 422 Client Error: Unprocessable Entity for url: https://paper-api.alpaca.markets/v2/orders
+2026-03-13 09:55:41,153 [INFO] trading.executor: BUY MP | $18570 | price ~$60.09 | confidence=0.80
+2026-03-13 09:55:41,395 [INFO] alpaca_client: Bracket order: buy MP qty=309.0374 @ ~$60.09 TP=$64.90 SL=$57.09
+2026-03-13 09:55:42,635 [ERROR] trading.executor: Buy execution failed for MP: 422 Client Error: Unprocessable Entity for url: https://paper-api.alpaca.markets/v2/orders
+2026-03-13 09:55:44,182 [INFO] trading.executor: BUY HON | $18571 | price ~$236.10 | confidence=0.70
+2026-03-13 09:55:44,399 [INFO] alpaca_client: Bracket order: buy HON qty=78.6562 @ ~$236.10 TP=$254.99 SL=$224.29
+2026-03-13 09:55:44,652 [ERROR] trading.executor: Buy execution failed for HON: 422 Client Error: Unprocessable Entity for url: https://paper-api.alpaca.markets/v2/orders
+2026-03-13 09:55:46,159 [INFO] trading.executor: BUY LTHM | $18570 | price ~$16.54 | confidence=0.70
+2026-03-13 09:55:46,394 [INFO] alpaca_client: Bracket order: buy LTHM qty=1123.0859 @ ~$16.54 TP=$17.86 SL=$15.71
+2026-03-13 09:55:46,621 [ERROR] trading.executor: Buy execution failed for LTHM: 422 Client Error: Unprocessable Entity for url: https://paper-api.alpaca.markets/v2/orders
+2026-03-13 09:55:48,125 [INFO] trading.executor: BUY UUUU | $18570 | price ~$20.36 | confidence=0.70
+2026-03-13 09:55:48,353 [INFO] alpaca_client: Bracket order: buy UUUU qty=911.8813 @ ~$20.36 TP=$21.99 SL=$19.35
+2026-03-13 09:55:48,590 [ERROR] trading.executor: Buy execution failed for UUUU: 422 Client Error: Unprocessable Entity for url: https://paper-api.alpaca.markets/v2/orders
+2026-03-13 09:55:50,151 [INFO] trading.executor: BUY ALB | $18570 | price ~$165.15 | confidence=0.70
+2026-03-13 09:55:50,375 [INFO] alpaca_client: Bracket order: buy ALB qty=112.4409 @ ~$165.15 TP=$178.36 SL=$156.89
+2026-03-13 09:55:50,616 [ERROR] trading.executor: Buy execution failed for ALB: 422 Client Error: Unprocessable Entity for url: https://paper-api.alpaca.markets/v2/orders
+2026-03-13 09:55:52,154 [INFO] trading.executor: BUY QUBT | $18575 | price ~$7.67 | confidence=0.70
+2026-03-13 09:55:52,409 [INFO] alpaca_client: Bracket order: buy QUBT qty=2421.8175 @ ~$7.67 TP=$8.28 SL=$7.29
+2026-03-13 09:55:52,667 [ERROR] trading.executor: Buy execution failed for QUBT: 422 Client Error: Unprocessable Entity for url: https://paper-api.alpaca.markets/v2/orders
+2026-03-13 09:55:54,239 [INFO] trading.executor: BUY PLTM | $18576 | price ~$20.11 | confidence=0.70
+2026-03-13 09:55:54,471 [INFO] alpaca_client: Bracket order: buy PLTM qty=923.7203 @ ~$20.11 TP=$21.72 SL=$19.10
+2026-03-13 09:55:54,722 [ERROR] trading.executor: Buy execution failed for PLTM: 422 Client Error: Unprocessable Entity for url: https://paper-api.alpaca.markets/v2/orders
+2026-03-13 09:55:56,335 [INFO] trading.executor: BUY IBM | $18577 | price ~$247.08 | confidence=0.70
+2026-03-13 09:55:56,556 [INFO] alpaca_client: Bracket order: buy IBM qty=75.1849 @ ~$247.08 TP=$266.85 SL=$234.73
+2026-03-13 09:55:56,774 [ERROR] trading.executor: Buy execution failed for IBM: 422 Client Error: Unprocessable Entity for url: https://paper-api.alpaca.markets/v2/orders
+2026-03-13 09:55:57,942 [INFO] notifications.telegram: Scan complete: 35 checked, 5 signals, no trades
+2026-03-13 09:55:57,943 [INFO] stockbot.main: === Cycle complete in 116.1s | 0 trades executed ===
+2026-03-13 09:55:57,943 [INFO] stockbot.main: Scheduler running. Ctrl+C to stop.
+2026-03-13 09:56:23,667 [INFO] stockbot.main: 🚀 StockBot starting up...
+2026-03-13 09:56:23,668 [INFO] data.db: Database initialized at /home/tanuk/workspace/stockbot/data/stockbot.db
+2026-03-13 09:56:24,198 [INFO] stockbot.main: Startup audit of inherited positions...
+2026-03-13 09:56:26,620 [INFO] stockbot.main: Running initial cycle...
+2026-03-13 09:56:26,844 [INFO] stockbot.main: === Trading cycle start | stocks=True crypto=True ===
+2026-03-13 09:56:27,072 [INFO] stockbot.main: Order fill tracker seeded with 2 existing fills
+2026-03-13 09:56:28,240 [INFO] stockbot.main: Positions: 2 (min=3) | Deployed: 54% — seeking trades
+2026-03-13 09:56:28,240 [INFO] sentiment.aggregator: Scraping Reddit...
+2026-03-13 09:56:45,705 [WARNING] sentiment.reddit: Comment fetch failed for 1romx3v: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/wallstreetbets/comments/1romx3v.json?limit=50&depth=1&sort=top (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x793572638410>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:56:57,899 [WARNING] sentiment.reddit: Reddit fetch failed for r/wallstreetbets: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/wallstreetbets/rising.json?limit=100 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x793572638e10>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:57:08,567 [WARNING] sentiment.reddit: Reddit fetch failed for r/wallstreetbetsnew: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/wallstreetbetsnew/hot.json?limit=50 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x793572638f50>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:57:27,378 [WARNING] sentiment.reddit: Reddit fetch failed for r/CryptoCurrency: HTTPSConnectionPool(host='www.reddit.com', port=443): Max retries exceeded with url: /r/CryptoCurrency/hot.json?limit=25 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.reddit.com', port=443) at 0x7935726387d0>, 'Connection to www.reddit.com timed out. (connect timeout=10)'))
+2026-03-13 09:57:29,680 [INFO] sentiment.reddit: Reddit: found mentions for 15 symbols across 310 unique posts
+2026-03-13 09:57:29,680 [INFO] sentiment.aggregator: Scraping StockTwits...
+2026-03-13 09:57:51,022 [INFO] sentiment.stocktwits: StockTwits: got data for 33 symbols
+2026-03-13 09:57:51,023 [INFO] sentiment.aggregator: Aggregated sentiment for 33 symbols
+2026-03-13 09:57:51,024 [INFO] analysis.claude_analyzer: Sending batch 1/2 (20 symbols) to claude-3-haiku-20240307...
+2026-03-13 09:57:51,024 [INFO] analysis.claude_analyzer: Using Anthropic model: claude-3-haiku-20240307
+2026-03-13 09:58:07,793 [INFO] httpx: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-03-13 09:58:07,843 [INFO] analysis.claude_analyzer: Batch 1: 20 signals
+2026-03-13 09:58:07,843 [INFO] analysis.claude_analyzer: Sending batch 2/2 (13 symbols) to claude-3-haiku-20240307...
+2026-03-13 09:58:07,843 [INFO] analysis.claude_analyzer: Using Anthropic model: claude-3-haiku-20240307
+2026-03-13 09:58:18,726 [INFO] httpx: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-03-13 09:58:18,744 [INFO] analysis.claude_analyzer: Batch 2: 13 signals
+2026-03-13 09:58:18,744 [INFO] analysis.claude_analyzer: Model returned 33 signals total
+2026-03-13 09:58:18,744 [INFO] analysis.claude_analyzer: 8 signals meet confidence threshold (0.65)
+2026-03-13 09:58:18,744 [INFO] stockbot.main: Signal: BUY MP conf=0.80 urgency=HIGH wsb=True — Highly bullish sentiment from both Reddit and StockTwits, with mentions of poten
+2026-03-13 09:58:18,745 [INFO] stockbot.main: Signal: BUY BBAI conf=0.70 urgency=HIGH wsb=False — Highly bullish sentiment on StockTwits, with comments indicating strong convicti
+2026-03-13 09:58:18,745 [INFO] stockbot.main: Signal: BUY LUNR conf=0.70 urgency=HIGH wsb=True — Bullish sentiment from both Reddit and StockTwits, with mentions of technical si
+2026-03-13 09:58:18,745 [INFO] stockbot.main: Signal: BUY GME conf=0.70 urgency=HIGH wsb=True — Bullish sentiment from WSB, with posts discussing positive developments and conv
+2026-03-13 09:58:18,745 [INFO] stockbot.main: Signal: BUY AMC conf=0.70 urgency=HIGH wsb=True — The sentiment on AMC is strongly bullish, with mentions of upcoming catalysts an
+2026-03-13 09:58:18,745 [INFO] stockbot.main: Signal: BUY META conf=0.70 urgency=MEDIUM wsb=True — Positive sentiment from WSB with posts discussing successful Meta trades. Raw se
+2026-03-13 09:58:18,745 [INFO] stockbot.main: Signal: BUY NVDA conf=0.70 urgency=MEDIUM wsb=True — Strong bullish sentiment on NVDA across WSB, with mentions of upside potential a
+2026-03-13 09:58:18,745 [INFO] stockbot.main: Signal: BUY IBM conf=0.70 urgency=MEDIUM wsb=True — The sentiment on IBM is strongly bullish, with mentions of upcoming quantum comp
+2026-03-13 09:58:19,919 [INFO] trading.executor: BUY MP | $18551 | price ~$59.94 | confidence=0.80
+2026-03-13 09:58:20,156 [INFO] alpaca_client: Bracket order: buy MP qty=309.0000 @ ~$59.94 TP=$64.74 SL=$56.94
+2026-03-13 09:58:21,101 [INFO] stockbot.main: Executed BUY: MP (confidence=0.80)
+2026-03-13 09:58:22,055 [INFO] trading.executor: BUY BBAI | $18548 | price ~$4.09 | confidence=0.70
+2026-03-13 09:58:22,271 [INFO] alpaca_client: Bracket order: buy BBAI qty=4534.0000 @ ~$4.09 TP=$4.42 SL=$3.89
+2026-03-13 09:58:23,178 [INFO] stockbot.main: Executed BUY: BBAI (confidence=0.70)
+2026-03-13 09:58:24,130 [INFO] trading.executor: BUY LUNR | $13906 | price ~$18.07 | confidence=0.70
+2026-03-13 09:58:24,373 [INFO] alpaca_client: Bracket order: buy LUNR qty=769.0000 @ ~$18.07 TP=$19.51 SL=$17.16
+2026-03-13 09:58:25,258 [INFO] stockbot.main: Executed BUY: LUNR (confidence=0.70)
+2026-03-13 09:58:25,704 [INFO] stockbot.main: Position slots full mid-cycle, stopping execution
+2026-03-13 09:58:26,831 [INFO] stockbot.main: === Cycle complete in 120.0s | 3 trades executed ===
+2026-03-13 09:58:26,832 [INFO] stockbot.main: Scheduler running. Ctrl+C to stop.
