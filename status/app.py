@@ -204,6 +204,13 @@ header{display:flex;align-items:center;margin-bottom:20px;padding-bottom:16px;bo
 .legend-dot{width:12px;height:3px;border-radius:2px;flex-shrink:0;}
 
 .section{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:18px 0 10px;}
+.section-primary{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text);margin:22px 0 12px;display:flex;align-items:center;gap:8px;}
+.section-primary .live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;flex-shrink:0;}
+.pos-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;transition:border-color .15s,transform .15s;}
+.pos-card.pos-green{border-left:3px solid var(--green);}
+.pos-card.pos-red{border-left:3px solid var(--red);}
+@media(min-width:600px){.pos-card:hover{border-color:#2e3a4a;transform:translateY(-1px);}}
+.pos-pl-big{font-family:var(--mono);font-size:22px;font-weight:700;}
 .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow-x:auto;overflow-y:hidden;}
 .tbl-wrap table{width:100%;border-collapse:collapse;}
 .tbl-wrap th{text-align:left;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap;}
@@ -317,8 +324,8 @@ function mkChart(ts, eq, bench) {
   }});
 }
 
-function posRow(p){const c=p.asset_class==='crypto',pc=cls(p.unrealized_plpc);return `<tr><td>${symLink(p.symbol,p.asset_class)}</td><td><span class="badge ${c?'b-crypto':'b-stock'}">${c?'crypto':'stock'}</span></td><td>${fmt(p.qty,c?6:4)}</td><td class="tip">${fmtM(p.avg_entry_price)}<span class="tiptext">Entry price</span></td><td class="tip">${fmtM(p.current_price)}<span class="tiptext">Last price</span></td><td>${fmtM(p.market_value)}</td><td class="${pc} tip">${fmtPL(p.unrealized_pl)} <span class="muted">(${fmtP(p.unrealized_plpc)})</span><span class="tiptext">Unrealized P/L</span></td></tr>`;}
-function posCard(p){const c=p.asset_class==='crypto',pc=cls(p.unrealized_plpc);return `<div class="mob-card"><div class="mob-row"><div>${symLink(p.symbol,p.asset_class)} <span class="badge ${c?'b-crypto':'b-stock'}">${c?'crypto':'stock'}</span></div><div class="${pc}" style="font-family:var(--mono);font-size:18px;font-weight:700">${fmtP(p.unrealized_plpc)}</div></div><div class="mob-grid"><div><div class="mob-cell-label">Value</div><div class="mob-cell-val">${fmtM(p.market_value)}</div></div><div><div class="mob-cell-label">P/L</div><div class="mob-cell-val ${pc}">${fmtPL(p.unrealized_pl)}</div></div><div><div class="mob-cell-label">Entry</div><div class="mob-cell-val">${fmtM(p.avg_entry_price)}</div></div><div><div class="mob-cell-label">Qty</div><div class="mob-cell-val">${fmt(p.qty,c?6:4)}</div></div></div></div>`;}
+function posRow(p){const c=p.asset_class==='crypto',pc=cls(p.unrealized_plpc);return `<tr style="border-left:3px solid ${p.unrealized_plpc>=0?'var(--green)':'var(--red)'}"><td>${symLink(p.symbol,p.asset_class)}</td><td><span class="badge ${c?'b-crypto':'b-stock'}">${c?'crypto':'stock'}</span></td><td>${fmt(p.qty,c?6:4)}</td><td class="tip">${fmtM(p.avg_entry_price)}<span class="tiptext">Entry price</span></td><td class="tip">${fmtM(p.current_price)}<span class="tiptext">Last price</span></td><td>${fmtM(p.market_value)}</td><td class="${pc} tip" style="font-size:14px;font-weight:700">${fmtPL(p.unrealized_pl)} <span class="muted" style="font-size:11px;font-weight:400">(${fmtP(p.unrealized_plpc)})</span><span class="tiptext">Unrealized P/L</span></td></tr>`;}
+function posCard(p){const c=p.asset_class==='crypto',pc=cls(p.unrealized_plpc),accent=p.unrealized_plpc>=0?'pos-green':'pos-red';return `<div class="pos-card ${accent}"><div class="mob-row"><div>${symLink(p.symbol,p.asset_class)} <span class="badge ${c?'b-crypto':'b-stock'}">${c?'crypto':'stock'}</span></div><div class="${pc} pos-pl-big">${fmtP(p.unrealized_plpc)}</div></div><div class="mob-grid"><div><div class="mob-cell-label">Value</div><div class="mob-cell-val">${fmtM(p.market_value)}</div></div><div><div class="mob-cell-label">P/L</div><div class="mob-cell-val ${pc}">${fmtPL(p.unrealized_pl)}</div></div><div><div class="mob-cell-label">Entry</div><div class="mob-cell-val">${fmtM(p.avg_entry_price)}</div></div><div><div class="mob-cell-label">Qty</div><div class="mob-cell-val">${fmt(p.qty,c?6:4)}</div></div></div></div>`;}
 function closeReasonBadge(reason){
   if(!reason) return '';
   const r=reason.toLowerCase();
@@ -406,8 +413,8 @@ function render(d){
 
       </div>
     </div>
-    <div class="section">Open Positions</div>
-    ${d.positions.length===0?'<div class="mob-card"><p class="empty">No open positions</p></div>':`<div class="tbl-wrap desktop-table"><table><thead><tr><th>Symbol</th><th>Type</th><th>Qty</th><th>Entry</th><th>Current</th><th>Value</th><th>P/L</th></tr></thead><tbody>${d.positions.map(posRow).join('')}</tbody></table></div><div class="mobile-cards">${d.positions.map(posCard).join('')}</div>`}
+    <div class="section-primary"><span class="live-dot"></span>Open Positions</div>
+    ${d.positions.length===0?'<div class="mob-card"><p class="empty">No open positions</p></div>':`<div class="tbl-wrap desktop-table" style="border-color:#1e3a2a""><table><thead><tr><th>Symbol</th><th>Type</th><th>Qty</th><th>Entry</th><th>Current</th><th>Value</th><th>P/L</th></tr></thead><tbody>${d.positions.map(posRow).join('')}</tbody></table></div><div class="mobile-cards">${d.positions.map(posCard).join('')}</div>`}
     <div class="section">Recent Trades</div>
     ${d.recent_orders.length===0?'<div class="mob-card"><p class="empty">No recent trades</p></div>':`<div class="tbl-wrap desktop-table"><table><thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Avg Price</th><th>P/L</th><th>Status</th><th>Date</th></tr></thead><tbody>${d.recent_orders.map(ordRow).join('')}</tbody></table></div><div class="mobile-cards">${d.recent_orders.map(ordCard).join('')}</div>`}
     <div class="section">Inverse Cramer Score — Correlation Tracker</div>
