@@ -223,10 +223,10 @@ a.sym:hover{color:var(--accent);border-bottom-color:var(--accent);}
 .mobile-cards{display:flex;flex-direction:column;gap:8px;}
 .mob-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;transition:border-color .15s,transform .15s;}
 .mob-card:hover{border-color:#2e3a4a;transform:translateY(-1px);}
-.mob-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.mob-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
 .mob-row:last-child{margin-bottom:0;}
 .mob-sym{font-size:16px;font-weight:700;}
-.mob-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:10px;}.pos-card .mob-grid{gap:8px 16px;margin-top:10px;}
+.mob-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:10px;}.pos-card .mob-grid{gap:8px 16px;margin-top:5px;}
 .mob-cell-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
 .mob-cell-val{font-family:var(--mono);font-size:12px;margin-top:1px;}.pos-card .mob-cell-val{font-size:20px;}.pos-card .mob-cell-label{font-size:13px;letter-spacing:.04em;}
 @media(max-width:599px){.desktop-table{display:none;}}
