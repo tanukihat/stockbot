@@ -432,8 +432,8 @@ function render(d){
       bench:(()=>{const nb={};for(const k in bench)nb[k]=(bench[k]||[]);return nb;})(),
     };
     const sel=document.getElementById('chart-range');
-    if(sel&&sel.value==='0')sel.value='30';
-    setChartRange(sel?sel.value:'30');
+    if(sel)sel.value='30';
+    setChartRange('30');
   }
   renderICSChart();
 }
