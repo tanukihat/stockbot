@@ -590,7 +590,13 @@ def api_add_event():
 
 @app.route("/stockbot/")
 @app.route("/stockbot")
-def index(): return HTML
+def index():
+    from flask import Response
+    r = Response(HTML, mimetype='text/html')
+    r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    r.headers['Pragma'] = 'no-cache'
+    r.headers['Expires'] = '0'
+    return r
 
 if __name__=="__main__":
     app.run(host="127.0.0.1", port=8081, debug=False)
