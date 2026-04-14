@@ -15,18 +15,19 @@ import logging
 import time
 import anthropic
 import requests
-from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
-from config import ANTHROPIC_API_KEY, ANALYSIS_MODEL
+from config import ANTHROPIC_API_KEY
 
 logger = logging.getLogger(__name__)
 
-_ET = ZoneInfo("America/New_York")
 _client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
-# In-memory cache: { symbol: {"ics": float, "cramer_action": str, "fetched_at": float} }
+# Per-symbol ICS cache
 _cramer_cache: dict = {}
-_CACHE_TTL_SECONDS = 3600  # refresh once per hour max
+_CACHE_TTL_SECONDS = 3600
+
+# Bulk tracker cache (one fetch covers all symbols)
+_tracker_cache: dict = {}  # {"data": {...}, "fetched_at": float}
+_TRACKER_TTL_SECONDS = 1800  # refresh every 30 min
 
 
 # ---------------------------------------------------------------------------
@@ -66,32 +67,35 @@ def _scrape_stockanalysis(symbol: str) -> list[str]:
 
 def _scrape_madmoney_tracker() -> dict[str, list[str]]:
     """
-    Pull recent Cramer picks from the Mad Money Stock Screener / trackers.
+    Pull recent Cramer picks from cramer-tracker.com.
+    Cached for 30 min — one fetch covers all symbols.
     Returns { symbol: [list of snippets] }
     """
+    now = time.time()
+    cached = _tracker_cache.get("data")
+    if cached and (now - _tracker_cache.get("fetched_at", 0)) < _TRACKER_TTL_SECONDS:
+        return cached
+
     results: dict[str, list[str]] = {}
     try:
-        # cramer-tracker.com provides a simple recent picks list
-        url = "https://www.cramer-tracker.com/picks"
-        headers = {"User-Agent": "Mozilla/5.0 (compatible; stockbot/1.0)"}
-        r = requests.get(url, headers=headers, timeout=10)
-        if r.status_code != 200:
-            return results
-        text = r.text
-        # Tickers are usually in ALL CAPS, 1-5 chars, surrounded by sentiment words
-        # Pattern: capture ticker + action within ~100 chars
-        pick_re = re.compile(
-            r'\b([A-Z]{1,5})\b.{0,80}?(buy|sell|bullish|bearish|positive|negative|own|avoid|don\'t buy)',
-            re.IGNORECASE
+        r = requests.get(
+            "https://www.cramer-tracker.com/picks",
+            headers={"User-Agent": "Mozilla/5.0 (compatible; stockbot/1.0)"},
+            timeout=10,
         )
-        for m in pick_re.finditer(text):
-            sym = m.group(1)
-            action = m.group(2)
-            if sym not in results:
-                results[sym] = []
-            results[sym].append(f"[cramer-tracker.com] Cramer: {action} on {sym}")
+        if r.status_code == 200:
+            pick_re = re.compile(
+                r'\b([A-Z]{1,5})\b.{0,80}?(buy|sell|bullish|bearish|positive|negative|own|avoid|don\'t buy)',
+                re.IGNORECASE,
+            )
+            for m in pick_re.finditer(r.text):
+                sym, action = m.group(1), m.group(2)
+                results.setdefault(sym, []).append(f"[cramer-tracker.com] Cramer: {action} on {sym}")
     except Exception as e:
         logger.debug(f"cramer-tracker scrape failed: {e}")
+
+    _tracker_cache["data"] = results
+    _tracker_cache["fetched_at"] = now
     return results
 
 
@@ -241,46 +245,27 @@ def compute_ics(symbol: str) -> dict:
     return result
 
 
-def format_ics_for_telegram(symbol: str, pnl_pct: float) -> str:
+def format_ics_line(ics_data: dict, pnl_pct: float) -> str:
     """
-    Returns a short ICS line to append to close notifications.
-    Includes whether the trade result matched Inverse Cramer theory.
-
-    ICS ≥ 0.65 = Cramer was bearish → Inverse Cramer said BUY
-    ICS ≤ 0.35 = Cramer was bullish → Inverse Cramer said AVOID
-    ICS 0.36–0.64 = No strong Cramer signal (neutral zone)
-
-    Verification:
-    - If ICS ≥ 0.65 and pnl_pct > 0 → ✅ Inverse Cramer correct
-    - If ICS ≥ 0.65 and pnl_pct ≤ 0 → ❌ Inverse Cramer wrong
-    - If ICS ≤ 0.35 and pnl_pct ≤ 0 → ✅ Inverse Cramer correct (avoided a loser)
-    - If ICS ≤ 0.35 and pnl_pct > 0 → ❌ Inverse Cramer wrong (missed a winner)
-    - Neutral zone → ➖ No signal
+    Format ICS line for Telegram from already-computed ICS data.
+    Verdict logic:
+      ICS ≥ 0.65 → IC said BUY; ✅ if profit, ❌ if loss
+      ICS ≤ 0.35 → IC said AVOID; ✅ if loss (dodged), ❌ if profit (missed)
+      neutral    → ➖
     """
-    try:
-        data = compute_ics(symbol)
-    except Exception as e:
-        logger.warning(f"ICS fetch failed for {symbol}: {e}")
-        return ""
+    if not ics_data.get("had_data"):
+        return "🎰 <b>ICS:</b> N/A (no Cramer data)"
 
-    ics = data["ics"]
-    cramer_call = data["cramer_action"]
-    had_data = data["had_data"]
+    ics = ics_data["ics"]
+    cramer_call = ics_data["cramer_action"]
 
-    if not had_data:
-        return f"🎰 <b>ICS:</b> N/A (no Cramer data)"
-
-    # Determine verdict
     if ics >= 0.65:
-        # Cramer was bearish → IC theory says this should profit
         verdict = "✅" if pnl_pct > 0 else "❌"
         signal_str = f"Cramer: {cramer_call} → IC: BUY signal"
     elif ics <= 0.35:
-        # Cramer was bullish → IC theory says avoid
         verdict = "✅" if pnl_pct <= 0 else "❌"
         signal_str = f"Cramer: {cramer_call} → IC: AVOID signal"
     else:
-        verdict = "➖"
-        signal_str = f"Cramer: {cramer_call} (neutral zone)"
+        verdict, signal_str = "➖", f"Cramer: {cramer_call} (neutral zone)"
 
     return f"🎰 <b>ICS:</b> {ics:.2f} | {signal_str} {verdict}"

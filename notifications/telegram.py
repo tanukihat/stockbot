@@ -9,6 +9,9 @@ import logging
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, QUIET_HOURS_START, QUIET_HOURS_END, STOP_LOSS_PCT, TAKE_PROFIT_PCT, SCAN_INTERVAL_MINUTES, CRYPTO_SCAN_INTERVAL_MINUTES
+from sentiment.cramer import compute_ics, format_ics_line
+from data.db import store_ics
+from events_writer import EVENT_SECRET
 
 logger = logging.getLogger(__name__)
 
@@ -142,23 +145,21 @@ def notify_trade_opened(trade: dict):
 
 
 _ICS_PUSH_URL = "https://eroticjesusfeet.com/stockbot/api/ics-record"
-_ICS_SECRET = "cd4c5484b99c1022bcb4d12c43e0c8cb0ffe6069008393bcd61dabad148b4b91"
 
 def _push_ics_to_dashboard(symbol: str, pnl_pct: float, ics_data: dict):
     """Push ICS record to the VPS status dashboard for correlation tracking."""
     try:
-        payload = {
-            "symbol": symbol,
-            "close_time": datetime.now(_ET).isoformat(),
-            "pnl_pct": pnl_pct,
-            "ics": ics_data.get("ics"),
-            "cramer_action": ics_data.get("cramer_action"),
-            "cramer_sentiment": ics_data.get("cramer_sentiment"),
-        }
         r = requests.post(
             _ICS_PUSH_URL,
-            json=payload,
-            headers={"X-Event-Secret": _ICS_SECRET},
+            json={
+                "symbol": symbol,
+                "close_time": datetime.now(_ET).isoformat(),
+                "pnl_pct": pnl_pct,
+                "ics": ics_data.get("ics"),
+                "cramer_action": ics_data.get("cramer_action"),
+                "cramer_sentiment": ics_data.get("cramer_sentiment"),
+            },
+            headers={"X-Event-Secret": EVENT_SECRET},
             timeout=8,
         )
         r.raise_for_status()
@@ -175,15 +176,13 @@ def notify_trade_closed(symbol, action, pnl, pnl_pct, reason, exit_price=None):
 
     price_str = f" @ ${exit_price:.2f}" if exit_price else ""
 
-    # Inverse Cramer Score — fetch async-style (best effort, don't block the close)
+    # Inverse Cramer Score — best effort, don't block the close
     ics_line = ""
     try:
-        from sentiment.cramer import compute_ics, format_ics_for_telegram
-        from data.db import store_ics
         ics_data = compute_ics(symbol)
-        store_ics(symbol, ics_data)  # persist locally
-        _push_ics_to_dashboard(symbol, pnl_pct, ics_data)  # push to VPS dashboard
-        ics_line = format_ics_for_telegram(symbol, pnl_pct)
+        store_ics(symbol, ics_data)
+        _push_ics_to_dashboard(symbol, pnl_pct, ics_data)
+        ics_line = format_ics_line(ics_data, pnl_pct)
     except Exception as _e:
         logger.debug(f"ICS lookup skipped for {symbol}: {_e}")
 
