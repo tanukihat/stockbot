@@ -175,7 +175,7 @@ HTML = r"""<!DOCTYPE html>
 <style>
 :root{color-scheme:dark;--bg:#0a0c10;--surface:#111418;--border:#1e2328;--text:#e2e8f0;--muted:#64748b;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--accent:#3b82f6;--mono:'JetBrains Mono','Fira Code',ui-monospace,monospace;}
 *{box-sizing:border-box;margin:0;padding:0;}
-html{overflow-x:hidden;}body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh;padding:16px;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-font-smoothing:antialiased;}
+html{overflow-x:hidden;}body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh;padding:16px;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-font-smoothing:antialiased;}.wrap{max-width:1100px;margin:0 auto;}
 header{display:flex;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
 .logo{font-size:20px;font-weight:700;letter-spacing:-.5px;margin-right:10px;}.logo span{color:var(--accent);}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;flex-shrink:0;margin-right:10px;}
@@ -238,6 +238,7 @@ a.sym:hover{color:var(--accent);border-bottom-color:var(--accent);}
 </style>
 </head>
 <body>
+<div class="wrap">
 <header>
   <div class="dot" id="dot"></div>
   <div class="logo">Stock<span>Bot</span> 🦞</div>
@@ -423,7 +424,8 @@ function render(d){
       </div>
       <div id="ics-empty" class="empty" style="display:none">No ICS data yet — closes after this deploy will populate it.</div>
     </div>
-    <div class="footer">paper trading only · not financial advice</div>`;
+    <div class="footer">paper trading only · not financial advice</div>
+</div>`;
 
   if(d.history.timestamp&&d.history.timestamp.length>1){
     _chartData={
