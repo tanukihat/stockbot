@@ -114,14 +114,40 @@ def open_position(symbol, asset_class, entry_price, notional):
 def close_position_db(symbol, exit_price, pnl, pnl_pct):
     conn = get_conn()
     c = conn.cursor()
+    now = datetime.now(timezone.utc).isoformat()
+    # Target only the most recent open position row to avoid nuking re-entries
     c.execute("""
         UPDATE position_log
         SET close_time = ?, exit_price = ?, pnl = ?, pnl_pct = ?, status = 'closed'
-        WHERE symbol = ? AND status = 'open'
-    """, (
-        datetime.now(timezone.utc).isoformat(),
-        exit_price, pnl, pnl_pct, symbol
-    ))
+        WHERE id = (
+            SELECT id FROM position_log
+            WHERE symbol = ? AND status = 'open'
+            ORDER BY open_time DESC LIMIT 1
+        )
+    """, (now, exit_price, pnl, pnl_pct, symbol))
+    # Also close out the matching BUY row in trades (most recent only)
+    c.execute("""
+        UPDATE trades
+        SET exit_price = ?, pnl = ?, pnl_pct = ?, status = 'closed'
+        WHERE id = (
+            SELECT id FROM trades
+            WHERE symbol = ? AND action = 'BUY' AND status IN ('pending_new', 'filled')
+            ORDER BY timestamp DESC LIMIT 1
+        )
+    """, (exit_price, pnl, pnl_pct, symbol))
+    conn.commit()
+    conn.close()
+
+
+def update_trade_filled(order_id: str, filled_price: float):
+    """Mark a BUY trade as filled once Alpaca confirms execution."""
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+        UPDATE trades
+        SET status = 'filled', entry_price = ?
+        WHERE order_id = ? AND action = 'BUY'
+    """, (filled_price, order_id))
     conn.commit()
     conn.close()
 

@@ -6,12 +6,13 @@ Set ANALYSIS_MODEL=openrouter/<model> to use free-tier OpenRouter models.
 Set ANALYSIS_MODEL=claude-sonnet-4-6 to go back to the big gun.
 """
 import json
+import time
 import logging
 import anthropic
 import requests as _requests
 from config import (
     ANTHROPIC_API_KEY, OPENROUTER_API_KEY,
-    CLAUDE_MODEL, ANALYSIS_MODEL, MIN_SENTIMENT_SCORE
+    ANALYSIS_MODEL, MIN_SENTIMENT_SCORE
 )
 
 logger = logging.getLogger(__name__)
@@ -20,50 +21,122 @@ _anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # Pre-filter: don't waste API tokens on clearly low-signal symbols
 # Must have either enough mentions OR a non-trivial sentiment score
-PRE_FILTER_MIN_MENTIONS = 6       # raised: fewer, higher-signal symbols per call
-PRE_FILTER_MIN_SENTIMENT = 0.20  # |raw_sentiment| threshold when mentions are low
-MAX_SYMBOLS_PER_CALL = 20        # batch cap — keeps response within token limits
+PRE_FILTER_MIN_MENTIONS = 10      # higher bar = fewer symbols = lower cost
+PRE_FILTER_MIN_SENTIMENT = 0.30  # stronger sentiment signal required
+MAX_SYMBOLS_PER_CALL = 10        # tighter batch cap — cuts token cost per call
 
-SYSTEM_PROMPT = """You are an autonomous AI trading analyst for a high-frequency paper trading bot.
-Your job is to analyze social sentiment data — primarily from Reddit's r/wallstreetbets and similar
-degen communities — and produce clear, structured trade signals.
+SYSTEM_PROMPT = """You are an autonomous AI trading analyst for an intraday paper trading bot.
+Your job is to analyze social sentiment data and produce trade signals for moves happening TODAY —
+within the next 2-6 hours. You are NOT a long-term investor. You do not care about fundamentals,
+analyst price targets, or multi-week theses.
 
-Strategy profile:
-- SCALPING focused: target 5-10% gains, quick in and out
-- High risk tolerance — this is WSB-style momentum trading
-- Primary signal source: retail degen sentiment (WSB, options traders, crypto degens)
-- Sectors of interest: AI/ML, quantum computing, strategic minerals, high-vol meme momentum
-- Asset classes: US equities, crypto
-- Max 5 simultaneous positions
-- Stop-loss: 8% | Take-profit: 7%
+## ⚠️ CRITICAL: INTRADAY ONLY
+This bot opens and closes ALL positions within the same trading day (EOD flatten at 3:50 PM ET).
+You must ONLY generate BUY signals for catalysts that are likely to move the stock TODAY.
 
-WSB sentiment interpretation guide:
-- "YOLO", "all in", "calls", "moon", "🚀", "tendies" → strong bullish signal
-- "puts", "short", "rekt", "bag holding", "drill", "🌈🐻" → strong bearish signal
-- High upvote scores on WSB posts = high retail conviction (weight heavily)
-- Comment sections with strong consensus amplify the signal
-- Distinguish between genuine DD posts and pure meme hype — DD gets higher confidence
-- "gamma squeeze" / "short squeeze" mentions = potentially explosive upside, flag HIGH urgency
+**SKIP immediately if the sentiment is:**
+- A long-term thesis ("this will 10x in 2025", "great company to hold", "buy and hold")
+- Fundamentals-based without a near-term catalyst ("strong earnings", "good balance sheet")
+- Post-earnings analysis without an imminent catalyst
+- Old news rehashed (check post age — posts >6h old are suspect, >12h are stale)
+- Vague hype with no specific near-term trigger
 
-You will receive aggregated social sentiment data for one or more symbols.
-For each symbol, output a JSON trade signal. Be decisive.
-Strong bullish WSB consensus = BUY. Weak/mixed = SKIP. Don't hedge.
+**ONLY generate BUY signals if the sentiment shows ONE OR MORE of:**
+- **Hard catalyst today**: earnings release, FDA decision, breaking news, major partnership — these are highest confidence
+- **Active WSB/meme momentum NOW**: high-upvote post (<4h old) with active comment section, coordinated pile-in, squeeze language in present tense — this IS a valid same-day catalyst, not noise
+- **Short/gamma squeeze starting**: unusual options activity mentioned, float short % discussed, "loading calls" language right now
+- **Sector momentum wave**: AI/crypto/quantum sector moving broadly today, multiple symbols in the same sector lighting up simultaneously
+- "I just bought", "loading up now", "entering here" language — present tense action signals crowd is moving NOW
 
-Output format (JSON array):
+## Strategy Profile
+- INTRADAY SCALPING: target 5-8% gains, EOD flat on all equities
+- Hold time: minutes to hours, never overnight for stocks
+- High risk tolerance — WSB-style momentum trading
+- Sectors: AI/ML, quantum computing, strategic minerals, high-vol meme momentum
+- Max 5 positions | Stop-loss: -5% | Take-profit: +8%
+- Some symbols are **dynamically discovered** (not on a fixed watchlist) — treat them the same as any other symbol; the same signal quality rules apply
+
+## Signal Quality Rules
+
+**Post age matters enormously:**
+- < 2h old: Fresh — high weight
+- 2-6h old: Usable — moderate weight
+- 6-12h old: Stale — low weight, only if still very active
+- > 12h old: Discard for intraday purposes — SKIP unless extraordinary reason
+
+**What makes a signal actionable TODAY:**
+- Price already moving (momentum confirmation)
+- High-upvote WSB post from last 2h with active comment section
+- Options activity (calls being bought for today/this week)
+- Breaking catalyst: news just dropped, squeeze just started
+- Cross-platform: Reddit + StockTwits both hot RIGHT NOW
+
+**Signal hierarchy (what to weight most):**
+1. Hard news catalyst today (Finnhub articles, earnings flag) — highest weight, can stand alone
+2. Active WSB momentum with fresh high-engagement posts — valid standalone signal for meme/momentum names
+3. Cross-confirmation: news + social both firing = maximum confidence
+4. Social only with no catalyst and old posts = skip
+
+**Urgency calibration:**
+- HIGH: Active squeeze, breaking news, earnings today, post < 2h with >1k upvotes, sector-wide wave
+- MEDIUM: Fresh WSB momentum (< 6h), moderate engagement, AI/crypto/quantum sector play
+- LOW: Older posts, single source — skip unless hard catalyst accompanies it
+
+**Confidence calibration:**
+- 0.85+: Strong fresh multi-source consensus, active price movement, clear same-day catalyst
+- 0.70-0.84: Good intraday signal, recent posts, moderate confirmation
+- 0.65-0.69: Borderline — only output if the catalyst is genuinely same-day
+- <0.65: SKIP
+
+## 🌍 Macro & Geopolitical Reasoning (CRITICAL)
+When news involves geopolitics, sanctions, wars, tariffs, or central bank events, you MUST reason through second-order effects before generating a signal. Social media crowds frequently misread these.
+
+**Ask yourself: is this genuine adoption/demand, or a crisis signal in disguise?**
+
+**Red flags — sentiment may be bullish but underlying event is RISK-OFF:**
+- Country adopting crypto/assets due to **sanctions or war** → they're being cut off from the financial system, not endorsing the asset. This is geopolitical instability, not adoption.
+- Military conflict near **strategic chokepoints** (Strait of Hormuz, Suez Canal, Taiwan Strait) → oil supply shock risk, broad market risk-off. Do NOT generate equity BUYs.
+- Tariff announcements, trade war escalation → risk-off for equities broadly, especially tech/China-exposed names.
+- Central bank surprise decisions (Fed, ECB) → volatility spike, avoid new entries.
+- Sanctions on major economies → currency/commodity disruption, not a retail trading opportunity.
+
+**Examples of misread signals (DO NOT follow the crowd here):**
+- "Iran accepting Bitcoin" during a war → Iran is under sanctions. This is a sanctions workaround, NOT crypto adoption. The actual news (Hormuz, oil, military escalation) is bearish for risk assets.
+- "Country bans crypto" → bearish for crypto regardless of how Reddit spins it.
+- "Fed holds rates" on a surprise → market may initially cheer, but uncertainty spike means avoid new longs.
+- "Tariffs paused" → genuine relief rally catalyst only if confirmed and market hasn't already priced it.
+
+**Genuine bullish crypto/asset signals (these ARE actionable):**
+- ETF approval or major institutional adoption in a stable geopolitical context
+- Major payment processor or sovereign wealth fund buy announcement
+- Regulatory clarity from a large economy (US, EU, Japan)
+- Tech breakthrough with clear commercial application
+
+**Rule: If the bullish framing requires ignoring a war, sanctions, or chokepoint closure — SKIP or HOLD. The crowd is wrong.**
+
+## WSB Lexicon
+- "YOLO", "all in", "calls", "moon", "🚀", "tendies", "gamma squeeze" → bullish (check if fresh)
+- "puts", "short", "rekt", "bag holding", "drill", "🌈🐻" → bearish
+- "loading up", "just bought", "entering now" → high recency signal
+- "DD" posts with price targets → only useful if catalyst is TODAY
+- High upvote + high comment velocity = crowd is active NOW
+
+## Output Format (JSON array only — no preamble, no explanation outside JSON)
 [
   {
     "symbol": "NVDA",
     "asset_class": "us_equity",
     "action": "BUY" | "SELL" | "HOLD" | "SKIP",
     "confidence": 0.0-1.0,
-    "reasoning": "Brief explanation (2-3 sentences max)",
+    "reasoning": "Brief explanation — must mention WHY this is actionable TODAY (2-3 sentences max)",
     "urgency": "HIGH" | "MEDIUM" | "LOW",
     "sector": "AI" | "QUANTUM" | "MINERALS" | "CRYPTO" | "WSB_MEME" | "OTHER",
     "wsb_signal": true | false
   }
 ]
 
-Only output valid JSON. No preamble, no explanation outside the JSON."""
+Be ruthless about skipping long-thesis noise. If you can't articulate a reason this moves TODAY, SKIP it.
+Only output valid JSON."""
 
 
 def _call_openrouter(model, system, user_content, max_tokens=2000):
@@ -201,20 +274,40 @@ def analyze_sentiment_batch(aggregated_data: dict) -> list:
 
     # --- Build prompt items ---
     def _build_prompt_for(batch: dict) -> str:
+        from datetime import datetime
+        import alpaca_client as _alpaca
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M ET")
         items = []
         for sym, data in batch.items():
             top_score = data.get("top_reddit_score", 0)
             score_str = f" | Top Reddit post score: {top_score:,}" if top_score > 0 else ""
+            earnings_flag = " ⚡EARNINGS TODAY" if data.get("has_earnings_today") else ""
+            discovery_flag = " 🔍 DYNAMICALLY DISCOVERED" if data.get("dynamic_discovery") else ""
+            news_str = f" | Finnhub articles: {data.get('finnhub_article_count', 0)}" if data.get('finnhub_article_count') else ""
+            # Intraday price context — helps Claude filter 'positive sentiment on a tanking stock'
+            price_str = ""
+            try:
+                asset_class = data.get("asset_class", "us_equity")
+                alpaca_sym = sym if asset_class != "crypto" else (f"{sym}/USD" if "/" not in sym else sym)
+                open_p = _alpaca.get_intraday_open_price(sym, asset_class)
+                current_p = _alpaca.get_latest_price(alpaca_sym, asset_class)
+                if open_p and current_p and open_p > 0:
+                    move_pct = (current_p - open_p) / open_p * 100
+                    direction = "⬆️" if move_pct >= 0 else "⬇️"
+                    price_str = f" | Intraday price move: {direction}{move_pct:+.2f}% (open ${open_p:.2f} → now ${current_p:.2f})"
+            except Exception:
+                pass
             items.append(
-                f"=== {sym} ({data['asset_class']}) ===\n"
+                f"=== {sym} ({data['asset_class']}){earnings_flag}{discovery_flag} ===\n"
                 f"Mentions: {data['mention_count']} (Reddit: {data['reddit_mention_count']}, "
-                f"StockTwits: {data['stocktwits_message_count']}){score_str}\n"
+                f"StockTwits: {data['stocktwits_message_count']}{news_str}){score_str}{price_str}\n"
                 f"Raw sentiment score: {data['raw_sentiment']:.2f} (-1=very bearish, +1=very bullish)\n"
-                f"Social context:\n{data['context']}\n"
+                f"Social context (post timestamps included — age is critical for intraday):\n{data['context']}\n"
             )
         return (
-            "Analyze the following social sentiment data and provide trade signals.\n"
-            "Current positions are tracked separately — focus only on signal quality.\n\n"
+            f"Current time: {now_str}. This bot trades INTRADAY ONLY — all positions close by 3:50 PM ET today.\n"
+            "Only generate BUY signals for catalysts that will move the stock within the next 2-6 hours.\n"
+            "SKIP anything that is a long-term thesis, old news, or lacks a same-day catalyst.\n\n"
             + "\n".join(items)
         )
 
@@ -241,6 +334,10 @@ def analyze_sentiment_batch(aggregated_data: dict) -> list:
 
         strong = [s for s in signals if s.get("confidence", 0) >= MIN_SENTIMENT_SCORE]
         logger.info(f"{len(strong)} signals meet confidence threshold ({MIN_SENTIMENT_SCORE})")
+        # Stamp each signal with generation time for TTL enforcement downstream
+        generated_at = time.time()
+        for s in strong:
+            s["generated_at"] = generated_at
         return strong
 
     except json.JSONDecodeError as e:
@@ -251,24 +348,5 @@ def analyze_sentiment_batch(aggregated_data: dict) -> list:
         return []
 
 
-def analyze_existing_position(symbol, asset_class, entry_price, current_price,
-                               unrealized_pct, holding_hours):
-    """
-    Ask whether to hold or close an existing position.
-    Uses the cheaper analysis model — this is called per-position per-cycle.
-    """
-    prompt = (
-        f"I hold {symbol} ({asset_class}). Entry: ${entry_price:.2f}, "
-        f"Current: ${current_price:.2f}, P&L: {unrealized_pct*100:.1f}%, "
-        f"Holding for {holding_hours:.1f} hours.\n"
-        f"Given our scalping strategy (target 5-10% gain, 8% stop-loss), "
-        f"should I HOLD or CLOSE this position? "
-        f'Output JSON: {{"action": "HOLD" or "CLOSE", "reasoning": "..."}}'
-    )
-    try:
-        raw = _call_model("You are a concise trading assistant. Output only valid JSON.", prompt,
-                          max_tokens=200)
-        return _parse_signals(raw) if isinstance(_parse_signals(raw), dict) else json.loads(raw.strip())
-    except Exception as e:
-        logger.error(f"Position analysis failed for {symbol}: {e}")
-        return {"action": "HOLD", "reasoning": "Analysis unavailable"}
+# analyze_existing_position was removed — position management is fully rule-based
+# (stop-loss / take-profit / trailing floor in trading/portfolio.py).

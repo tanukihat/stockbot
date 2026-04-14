@@ -8,7 +8,7 @@ import requests
 import logging
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, QUIET_HOURS_START, QUIET_HOURS_END
+from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, QUIET_HOURS_START, QUIET_HOURS_END, STOP_LOSS_PCT, TAKE_PROFIT_PCT, SCAN_INTERVAL_MINUTES, CRYPTO_SCAN_INTERVAL_MINUTES
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ def notify_startup(portfolio_state):
     cash = portfolio_state["cash"]
     positions = portfolio_state["all_positions"]
     pos_str = "\n".join(
-        f"  • {p['symbol']}: ${p['market_value']:.0f} ({p['unrealized_plpc']*100:+.1f}%)"
+        f"  • {p['symbol']}: {p['qty']:.4g} shares @ ${p['current_price']:.2f} (avg ${p['avg_entry_price']:.2f}) — ${p['market_value']:.0f} ({p['unrealized_plpc']*100:+.1f}%)"
         for p in positions
     ) or "  (none)"
 
@@ -88,15 +88,15 @@ def notify_startup(portfolio_state):
         f"🤖 <b>StockBot Online</b>\n"
         f"📊 Portfolio: <b>${pv:,.2f}</b>\n"
         f"💵 Cash: ${cash:,.2f}\n"
-        f"📦 Current Positions:\n{pos_str}\n\n"
-        f"🎯 Strategy: Scalping 5-10% | SL: -8% | TP: +7%\n"
-        f"⚡ Scanning every 30 min. Let's get it."
+        f"📦 Current Positions:\n{pos_str}"
     )
     send(msg)
 
 
 def notify_order_filled(symbol, side, qty, avg_price, pnl=None, pnl_pct=None):
     """Notify when a pending order fills (e.g. a pre-queued stop/sell executes)."""
+    if side == "buy":
+        return  # OPENED notification already covers buy info
     if side == "sell":
         pnl_str = ""
         if pnl is not None and pnl_pct is not None:
@@ -125,14 +125,16 @@ def notify_trade_opened(trade: dict):
     conf = trade.get("confidence", 0)
     reason = trade.get("reasoning", "")
     asset = trade.get("asset_class", "us_equity")
+    qty = round(notional / price, 6) if price else 0
+    qty_str = f"{qty:.4g} shares"
 
     asset_emoji = "₿" if asset == "crypto" else "📈"
 
     msg = (
         f"{asset_emoji} <b>OPENED: {sym}</b>\n"
-        f"💰 Size: ${notional:,.0f} @ ${price:.2f}\n"
-        f"✅ Take Profit: ${tp:.2f} (+7%)\n"
-        f"🛑 Stop Loss: ${sl:.2f} (-8%)\n"
+        f"💰 {qty_str} @ ${price:.2f} (${notional:,.0f})\n"
+        f"✅ Take Profit: ${tp:.2f} (+{TAKE_PROFIT_PCT*100:.0f}%)\n"
+        f"🛑 Stop Loss: ${sl:.2f} (-{STOP_LOSS_PCT*100:.0f}%)\n"
         f"🧠 Confidence: {conf*100:.0f}%\n"
         f"📝 {reason}"
     )

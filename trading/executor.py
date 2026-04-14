@@ -5,12 +5,11 @@ Translates Claude's signals into actual Alpaca orders.
 import logging
 from datetime import datetime, date, timedelta
 from config import (
-    STOP_LOSS_PCT, TAKE_PROFIT_PCT, TARGET_STOCK_PCT, TARGET_CRYPTO_PCT,
-    TARGET_OPTIONS_PCT, MAX_POSITIONS, OPTIONS_MAX_DTE, OPTIONS_MIN_DTE,
-    ALL_STOCK_SYMBOLS, ALL_CRYPTO_SYMBOLS
+    STOP_LOSS_PCT, TAKE_PROFIT_PCT, OPTIONS_MAX_DTE, OPTIONS_MIN_DTE,
+    ALL_CRYPTO_SYMBOLS, MAX_INTRADAY_MOVE_PCT
 )
 import alpaca_client as alpaca
-from trading.portfolio import get_portfolio_state, get_position_size, get_symbols_held
+from trading.portfolio import get_position_size, get_symbols_held
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +70,18 @@ def _execute_buy(symbol, asset_class, notional, price, confidence, reasoning):
     # Alpaca requires "BTC/USD" format for crypto orders, not bare "BTC"
     alpaca_symbol = f"{symbol}/USD" if asset_class == "crypto" and "/" not in symbol else symbol
 
+    # Momentum gate: skip if price has already moved too much from today's open
+    try:
+        open_price = alpaca.get_intraday_open_price(symbol, asset_class)
+        if open_price and open_price > 0:
+            intraday_move = abs(price - open_price) / open_price
+            if intraday_move > MAX_INTRADAY_MOVE_PCT:
+                direction = "up" if price > open_price else "down"
+                logger.info(f"Momentum gate: {symbol} already moved {direction} {intraday_move*100:.1f}% from open (${open_price:.2f} → ${price:.2f}) — skipping buy")
+                return {"action": "BUY_SKIPPED", "symbol": symbol, "reason": f"intraday move {intraday_move*100:.1f}% exceeds {MAX_INTRADAY_MOVE_PCT*100:.0f}% gate"}
+    except Exception as e:
+        logger.warning(f"Momentum gate check failed for {symbol}: {e} — proceeding anyway")
+
     try:
         # Use bracket orders for stocks (cleaner, one API call)
         if asset_class == "us_equity":
@@ -105,7 +116,7 @@ def _execute_buy(symbol, asset_class, notional, price, confidence, reasoning):
                 "confidence": confidence,
                 "reasoning": reasoning,
                 "order_id": result.get("id", ""),
-                "status": "filled" if result.get("status") in ("filled", "new") else result.get("status"),
+                "status": "filled" if result.get("status") in ("filled", "new", "accepted") else result.get("status"),
             }
 
     except Exception as e:
@@ -193,6 +204,9 @@ def buy_options_call(underlying, confidence, portfolio_value):
             qty=contracts_qty,
             asset_class="us_equity",
         )
+        if not result:
+            logger.error(f"Options order returned no result for {contract_sym}")
+            return None
         return {
             "action": "BUY_OPTION",
             "symbol": contract_sym,

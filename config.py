@@ -24,6 +24,9 @@ ANALYSIS_MODEL = os.getenv("ANALYSIS_MODEL", "claude-3-haiku-20240307")
 # --- OpenRouter (optional, enables free-tier models) ---
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 
+# --- Finnhub ---
+FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")
+
 # --- Telegram ---
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -63,6 +66,11 @@ QUIET_HOURS_END   = 8   # 8 AM ET
 MIN_SENTIMENT_SCORE = 0.65          # Min confidence to open a position (0-1)
 MIN_SENTIMENT_SCORE_URGENT = 0.55   # Lower bar for HIGH urgency signals (squeeze plays)
 MIN_SENTIMENT_MENTIONS = 3          # Min number of source mentions to consider
+
+# --- Signal quality filters (literature-backed) ---
+SIGNAL_TTL_EQUITY_SECS = 30 * 60   # Equity signals expire after 30 min (Chen et al. 2014)
+SIGNAL_TTL_CRYPTO_SECS = 15 * 60   # Crypto signals expire faster — 15 min
+ANTI_PUMP_MAX_MOVE_PCT = 0.03       # Skip BUY if ticker already up >3% intraday (likely in distribution phase)
 
 # --- Watchlists ---
 WATCHLIST = {
@@ -126,6 +134,9 @@ REDDIT_SUB_CONFIG = [
 
 # Keep a flat list for compatibility
 REDDIT_SUBS = [sub for sub, _, _ in REDDIT_SUB_CONFIG]
+
+# Momentum gate — skip buying if price has already moved too much from today's open
+MAX_INTRADAY_MOVE_PCT = 0.08   # Skip buy if stock already up/down >8% on the day
 
 # Options config
 OPTIONS_MAX_DTE = 14       # Max days to expiration for options plays

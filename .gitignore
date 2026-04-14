@@ -1,0 +1,24 @@
+# Environment & secrets
+.env
+*.env
+
+# Database & state
+data/stockbot.db
+data/milestone_state.json
+
+# Logs & runtime
+stockbot.log
+stockbot.pid
+watchdog.log
+events.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+
+# Generated HTML
+equity_chart.html

@@ -65,11 +65,6 @@ The bot sends you updates on every trade. No commands supported yet —
 it's a fire-and-forget autonomous system.
 
 ## TODO
-- [ ] **Telegram setup** — need bot token + chat ID from Michael
-  - Create bot: message @BotFather → `/newbot`
-  - Get chat ID: message the bot, then hit `https://api.telegram.org/bot<TOKEN>/getUpdates`
-  - Fill `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`
-  - Until then, notifications print to stdout/log only
 - [ ] Add more sentiment sources (news API, Google Trends)
 - [ ] StockTwits crypto symbol mapping refinement
 - [ ] Options expiry tracking + auto-close on approach

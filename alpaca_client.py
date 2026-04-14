@@ -4,7 +4,7 @@ Handles account info, positions, orders, and market data.
 """
 import requests
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from config import ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL
 
 logger = logging.getLogger(__name__)
@@ -90,19 +90,64 @@ def get_position(symbol):
         raise
 
 
-def close_position(symbol, reason=""):
-    logger.info(f"Closing position: {symbol} — {reason}")
+def cancel_orders_for_symbol(symbol):
+    """Cancel all open AND held orders for a specific symbol before closing a position.
+    Bracket child legs (TP/SL) appear as 'held', not 'open' — we must query both.
+    Returns True if any orders were cancelled."""
+    cancelled = False
     try:
-        return _delete(f"/positions/{symbol}")
-    except requests.HTTPError as e:
-        status = e.response.status_code
-        if status in (403, 404, 422):
-            # 403/422 = order already in flight; 404 = position already gone
-            # Both mean the position is being/has been closed — treat as success
-            logger.info(f"Position {symbol} already closed or close in progress (HTTP {status}) — OK")
-            return {}
-        logger.error(f"Failed to close {symbol}: {e}")
-        return None
+        # Bracket child legs have status='held'; regular pending orders are 'open'.
+        # Query both so we don't miss legs that are locking shares.
+        all_orders = _get("/orders", params={"status": "open", "limit": 50})
+        held_orders = _get("/orders", params={"status": "held", "limit": 50})
+        orders_to_cancel = all_orders + held_orders
+        for o in orders_to_cancel:
+            if o.get("symbol") == symbol:
+                try:
+                    _delete(f"/orders/{o['id']}")
+                    logger.info(f"Cancelled order {o['id']} for {symbol} (status={o.get('status')}, side={o.get('side')})")
+                    cancelled = True
+                except Exception as e:
+                    logger.warning(f"Failed to cancel order {o['id']} for {symbol}: {e}")
+    except Exception as e:
+        logger.warning(f"Could not fetch orders to cancel for {symbol}: {e}")
+    return cancelled
+
+
+def close_position(symbol, reason=""):
+    import time as _time
+    logger.info(f"Closing position: {symbol} — {reason}")
+    # Cancel any open orders for this symbol first — pending GTC orders cause 403
+    cancelled = cancel_orders_for_symbol(symbol)
+
+    # If we cancelled orders, wait for Alpaca to release held shares before closing.
+    # Bracket leg cancellations need more time to propagate than simple order cancels.
+    if cancelled:
+        _time.sleep(3.0)
+
+    # Positions endpoint uses no-slash format (BTCUSD), orders use BTC/USD.
+    # Strip the slash so DELETE /positions/BTCUSD works correctly.
+    pos_symbol = symbol.replace("/", "")
+
+    for attempt in range(2):
+        try:
+            return _delete(f"/positions/{pos_symbol}")
+        except requests.HTTPError as e:
+            status = e.response.status_code
+            if status == 404:
+                logger.info(f"Position {symbol} already gone (HTTP 404) — OK")
+                return {}
+            if status == 422:
+                logger.info(f"Position {symbol} close already in progress (HTTP 422) — OK")
+                return {}
+            if status == 403 and attempt == 0:
+                # Shares still held — wait longer and retry once
+                logger.warning(f"Close {symbol} got 403 (shares still held), retrying in 3s...")
+                _time.sleep(3)
+                continue
+            logger.error(f"Failed to close {symbol} (HTTP {status}): {e.response.text[:200]}")
+            return None
+    return None
 
 
 # --- Orders ---
@@ -113,13 +158,14 @@ def get_open_orders():
 
 def get_filled_orders(since=None, limit=50):
     """Return closed/filled orders, optionally filtered by a UTC timestamp string."""
-    params = {"status": "closed", "limit": limit}
+    params = {"status": "filled", "limit": limit}
     if since:
         params["after"] = since
     return _get("/orders", params=params)
 
 
 def cancel_all_orders():
+    """Cancel all open and held orders. Returns the Alpaca response."""
     return _delete("/orders")
 
 
@@ -164,7 +210,6 @@ def place_bracket_order(symbol, side, notional, take_profit_pct, stop_loss_pct, 
         logger.warning(f"Bracket order qty=0 for {symbol} (notional=${notional:.0f}, price=${price:.2f}) — falling back to notional market order")
         return place_market_order(symbol, side, notional=notional, asset_class=asset_class)
 
-
     if side == "buy":
         tp_price = round(price * (1 + take_profit_pct), 2)
         sl_price = round(price * (1 - stop_loss_pct), 2)
@@ -190,39 +235,14 @@ def place_bracket_order(symbol, side, notional, take_profit_pct, stop_loss_pct, 
     return _post("/orders", body)
 
 
-def place_stop_loss(symbol, qty, stop_price, side="sell"):
-    body = {
-        "symbol": symbol,
-        "qty": str(qty),
-        "side": side,
-        "type": "stop",
-        "stop_price": str(round(stop_price, 2)),
-        "time_in_force": "gtc",
-    }
-    return _post("/orders", body)
-
-
-def place_limit_order(symbol, side, qty, limit_price, asset_class="us_equity"):
-    body = {
-        "symbol": symbol,
-        "qty": str(qty),
-        "side": side,
-        "type": "limit",
-        "limit_price": str(round(limit_price, 2)),
-        "time_in_force": "day" if asset_class == "us_equity" else "gtc",
-    }
-    return _post("/orders", body)
-
-
 # --- Market Data ---
 
 def get_latest_price(symbol, asset_class="us_equity"):
     """Get the latest trade price for a symbol."""
     try:
         if asset_class == "crypto":
-            # Alpaca crypto symbol format: BTC/USD -> BTC/USD
-            sym = symbol.replace("/", "%2F")
-            data = _get(f"/crypto/us/latest/trades?symbols={sym}", base=DATA_CRYPTO_URL)
+            # Use params= so requests handles encoding safely (avoids double-encode of %2F)
+            data = _get("/crypto/us/latest/trades", base=DATA_CRYPTO_URL, params={"symbols": symbol})
             trades = data.get("trades", {})
             clean = symbol.replace("/", "")
             # Try both formats
@@ -232,7 +252,7 @@ def get_latest_price(symbol, asset_class="us_equity"):
                 return float(trades[clean]["p"])
             return None
         else:
-            data = _get(f"/stocks/trades/latest?symbols={symbol}", base=DATA_BASE_URL)
+            data = _get("/stocks/trades/latest", base=DATA_BASE_URL, params={"symbols": symbol})
             trades = data.get("trades", {})
             if symbol in trades:
                 return float(trades[symbol]["p"])
@@ -258,6 +278,36 @@ def get_asset_info(symbol):
         return _get(f"/assets/{symbol}")
     except Exception:
         return None
+
+
+def get_intraday_open_price(symbol, asset_class="us_equity"):
+    """
+    Return today's opening price for a symbol.
+    Used by the anti-pump filter to detect tickers that have already moved hard.
+    Returns None if unavailable.
+    """
+    try:
+        if asset_class == "crypto":
+            data = _get(
+                "/crypto/us/bars",
+                base=DATA_CRYPTO_URL,
+                params={"symbols": symbol, "timeframe": "1Day", "limit": 1},
+            )
+            bars = data.get("bars", {})
+            key = symbol if symbol in bars else symbol.replace("/", "")
+            if key in bars and bars[key]:
+                return float(bars[key][0]["o"])
+        else:
+            data = _get(
+                f"/stocks/bars?symbols={symbol}&timeframe=1Day&limit=1",
+                base=DATA_BASE_URL
+            )
+            bars = data.get("bars", {})
+            if symbol in bars and bars[symbol]:
+                return float(bars[symbol][0]["o"])
+    except Exception as e:
+        logger.warning(f"Could not get intraday open for {symbol}: {e}")
+    return None
 
 
 def get_options_contracts(underlying, expiration_date_gte, expiration_date_lte, option_type="call"):

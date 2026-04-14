@@ -5,7 +5,7 @@ import logging
 from config import (
     MAX_POSITIONS, TARGET_STOCK_PCT, TARGET_CRYPTO_PCT, TARGET_OPTIONS_PCT,
     MAX_POSITION_PCT, STOP_LOSS_PCT, TAKE_PROFIT_PCT,
-    TRAILING_STOP_PCT, TRAILING_ACTIVATE_PCT
+    TRAILING_ACTIVATE_PCT
 )
 import alpaca_client as alpaca
 from data.db import get_position_peak, update_position_peak
@@ -77,10 +77,33 @@ def get_portfolio_state():
     }
 
 
+def get_market_volatility_scalar() -> float:
+    """
+    Returns a position-size scalar (0.5–1.0) based on intraday SPY volatility.
+    If SPY has moved >2% intraday, we're in a high-vol macro environment—
+    shrink positions to reduce exposure. This is the macro blindspot mitigation.
+    """
+    try:
+        open_p = alpaca.get_intraday_open_price("SPY", "us_equity")
+        current_p = alpaca.get_latest_price("SPY", "us_equity")
+        if open_p and current_p and open_p > 0:
+            move = abs((current_p - open_p) / open_p)
+            if move >= 0.03:      # SPY moved 3%+ intraday — extreme vol, half size
+                logger.info(f"Macro vol scalar: SPY intraday move={move*100:.1f}% → 0.50x position size")
+                return 0.50
+            elif move >= 0.02:   # SPY moved 2%+ — elevated vol, reduced size
+                logger.info(f"Macro vol scalar: SPY intraday move={move*100:.1f}% → 0.75x position size")
+                return 0.75
+    except Exception as e:
+        logger.warning(f"Volatility scalar check failed: {e}")
+    return 1.0  # Normal conditions — full size
+
+
 def get_position_size(portfolio_value, asset_class, n_open=1):
     """
     Calculate appropriate position size based on portfolio value and targets.
     n_open: how many positions of this type will be open after this one (including it).
+    Applies a macro volatility scalar to shrink size during high-vol days.
     Stays within max position size constraint.
     """
     n = max(1, n_open)
@@ -94,7 +117,10 @@ def get_position_size(portfolio_value, asset_class, n_open=1):
 
     # Don't let any single position exceed MAX_POSITION_PCT of portfolio
     target_pct = min(target_pct, MAX_POSITION_PCT)
-    return portfolio_value * target_pct
+
+    # Scale down during high macro volatility (e.g. tariff days, FOMC)
+    vol_scalar = get_market_volatility_scalar()
+    return portfolio_value * target_pct * vol_scalar
 
 
 
@@ -104,7 +130,6 @@ def check_stop_and_take_profit(state):
     Returns list of positions to close with reasons.
     """
     to_close = []
-    close_symbols = set()
 
     for pos in state["all_positions"]:
         pct = pos["unrealized_plpc"]
@@ -117,7 +142,6 @@ def check_stop_and_take_profit(state):
                 "reason": f"STOP-LOSS triggered at {pct*100:.1f}%",
                 "pnl_pct": pct,
             })
-            close_symbols.add(sym)
             continue
 
         if pct >= TAKE_PROFIT_PCT:
@@ -127,7 +151,6 @@ def check_stop_and_take_profit(state):
                 "reason": f"TAKE-PROFIT triggered at {pct*100:.1f}%",
                 "pnl_pct": pct,
             })
-            close_symbols.add(sym)
             continue
 
         # --- Profit floor (trailing) ---
@@ -148,7 +171,6 @@ def check_stop_and_take_profit(state):
                 "reason": f"PROFIT-FLOOR: peaked at {peak*100:+.1f}%, dropped back to floor ({TRAILING_ACTIVATE_PCT*100:.0f}%)",
                 "pnl_pct": pct,
             })
-            close_symbols.add(sym)
 
     return to_close
 

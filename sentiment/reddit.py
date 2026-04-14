@@ -7,6 +7,7 @@ import requests
 import re
 import logging
 import time
+from datetime import datetime, timezone
 from config import (
     REDDIT_SUB_CONFIG, ALL_STOCK_SYMBOLS, ALL_CRYPTO_SYMBOLS,
     SECTOR_KEYWORDS, DOLLAR_SIGN_ONLY_TICKERS
@@ -141,6 +142,17 @@ def basic_sentiment(text):
 # Score threshold to bother fetching comments (saves API calls)
 COMMENT_FETCH_MIN_SCORE = 1500
 
+# Max post age for intraday trading — discard stale signals
+MAX_POST_AGE_HOURS = 24
+
+
+def post_age_hours(post):
+    """Returns how many hours ago a Reddit post was created."""
+    created_utc = post.get("created_utc")
+    if not created_utc:
+        return 0
+    return (datetime.now(timezone.utc).timestamp() - created_utc) / 3600
+
 
 def scrape_reddit():
     """
@@ -166,6 +178,12 @@ def scrape_reddit():
                 body = post.get("selftext", "")
                 score = post.get("score", 0)
                 url = post.get("url", "")
+                age_hours = post_age_hours(post)
+
+                # Skip posts older than MAX_POST_AGE_HOURS — stale for intraday
+                if age_hours > MAX_POST_AGE_HOURS:
+                    continue
+
                 combined = f"{title} {body}"
 
                 has_keyword = any(kw.lower() in combined.lower() for kw in SECTOR_KEYWORDS)
@@ -206,6 +224,7 @@ def scrape_reddit():
                         "score": score,
                         "url": url,
                         "sentiment": sentiment,
+                        "age_hours": round(age_hours, 1),
                     })
                     symbol_data[sym]["raw_sentiment_sum"] += sentiment
                     symbol_data[sym]["mention_count"] += 1
