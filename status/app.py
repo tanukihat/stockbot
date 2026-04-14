@@ -206,7 +206,7 @@ header{display:flex;align-items:center;margin-bottom:20px;padding-bottom:16px;bo
 .section{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:18px 0 10px;}
 .section-primary{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text);margin:22px 0 12px;display:flex;align-items:center;gap:8px;}
 .section-primary .live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;flex-shrink:0;}
-.pos-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;transition:border-color .15s,transform .15s;}
+.pos-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;transition:border-color .15s,transform .15s;}
 .pos-card.pos-green{border-left:3px solid var(--green);}
 .pos-card.pos-red{border-left:3px solid var(--red);}
 @media(min-width:600px){.pos-card:hover{border-color:#2e3a4a;transform:translateY(-1px);}}
@@ -226,9 +226,9 @@ a.sym:hover{color:var(--accent);border-bottom-color:var(--accent);}
 .mob-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
 .mob-row:last-child{margin-bottom:0;}
 .mob-sym{font-size:16px;font-weight:700;}
-.mob-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:10px;}
+.mob-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:10px;}.pos-card .mob-grid{gap:12px 16px;margin-top:14px;}
 .mob-cell-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
-.mob-cell-val{font-family:var(--mono);font-size:12px;margin-top:1px;}.pos-card .mob-cell-val{font-size:17px;}.pos-card .mob-cell-label{font-size:11px;}
+.mob-cell-val{font-family:var(--mono);font-size:12px;margin-top:1px;}.pos-card .mob-cell-val{font-size:20px;}.pos-card .mob-cell-label{font-size:13px;letter-spacing:.04em;}
 @media(max-width:599px){.desktop-table{display:none;}}
 @media(min-width:600px){.mobile-cards{display:none;}}
 .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:4px;text-transform:uppercase;touch-action:manipulation;}
