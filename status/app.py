@@ -210,11 +210,11 @@ header{display:flex;align-items:center;margin-bottom:20px;padding-bottom:16px;bo
 .pos-card.pos-green{border-left:3px solid var(--green);}
 .pos-card.pos-red{border-left:3px solid var(--red);}
 @media(min-width:600px){.pos-card:hover{border-color:#2e3a4a;transform:translateY(-1px);}}
-.pos-pl-big{font-family:var(--mono);font-size:22px;font-weight:700;}
+.pos-pl-big{font-family:var(--mono);font-size:26px;font-weight:700;}
 .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow-x:auto;overflow-y:hidden;}
 .tbl-wrap table{width:100%;border-collapse:collapse;}
 .tbl-wrap th{text-align:left;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap;}
-.tbl-wrap td{padding:10px 14px;font-family:var(--mono);font-size:12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+.tbl-wrap td{padding:10px 14px;font-family:var(--mono);font-size:12px;border-bottom:1px solid var(--border);white-space:nowrap;}.pos-tbl td{padding:14px 16px;}
 .tbl-wrap tr:last-child td{border-bottom:none;}
 .tbl-wrap tbody tr:hover td{background:rgba(59,130,246,.06);}
 a.sym{color:var(--text);text-decoration:none;font-weight:700;border-bottom:1px dashed transparent;transition:color .15s,border-color .15s;}
@@ -228,7 +228,7 @@ a.sym:hover{color:var(--accent);border-bottom-color:var(--accent);}
 .mob-sym{font-size:16px;font-weight:700;}
 .mob-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:10px;}
 .mob-cell-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
-.mob-cell-val{font-family:var(--mono);font-size:12px;margin-top:1px;}
+.mob-cell-val{font-family:var(--mono);font-size:12px;margin-top:1px;}.pos-card .mob-cell-val{font-size:14px;}.pos-card .mob-cell-label{font-size:11px;}
 @media(max-width:599px){.desktop-table{display:none;}}
 @media(min-width:600px){.mobile-cards{display:none;}}
 .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:4px;text-transform:uppercase;touch-action:manipulation;}
@@ -324,8 +324,8 @@ function mkChart(ts, eq, bench) {
   }});
 }
 
-function posRow(p){const c=p.asset_class==='crypto',pc=cls(p.unrealized_plpc);return `<tr style="border-left:3px solid ${p.unrealized_plpc>=0?'var(--green)':'var(--red)'}"><td>${symLink(p.symbol,p.asset_class)}</td><td><span class="badge ${c?'b-crypto':'b-stock'}">${c?'crypto':'stock'}</span></td><td>${fmt(p.qty,c?6:4)}</td><td class="tip">${fmtM(p.avg_entry_price)}<span class="tiptext">Entry price</span></td><td class="tip">${fmtM(p.current_price)}<span class="tiptext">Last price</span></td><td>${fmtM(p.market_value)}</td><td class="${pc} tip" style="font-size:14px;font-weight:700">${fmtPL(p.unrealized_pl)} <span class="muted" style="font-size:11px;font-weight:400">(${fmtP(p.unrealized_plpc)})</span><span class="tiptext">Unrealized P/L</span></td></tr>`;}
-function posCard(p){const c=p.asset_class==='crypto',pc=cls(p.unrealized_plpc),accent=p.unrealized_plpc>=0?'pos-green':'pos-red';return `<div class="pos-card ${accent}"><div class="mob-row"><div>${symLink(p.symbol,p.asset_class)} <span class="badge ${c?'b-crypto':'b-stock'}">${c?'crypto':'stock'}</span></div><div class="${pc} pos-pl-big">${fmtP(p.unrealized_plpc)}</div></div><div class="mob-grid"><div><div class="mob-cell-label">Value</div><div class="mob-cell-val">${fmtM(p.market_value)}</div></div><div><div class="mob-cell-label">P/L</div><div class="mob-cell-val ${pc}">${fmtPL(p.unrealized_pl)}</div></div><div><div class="mob-cell-label">Entry</div><div class="mob-cell-val">${fmtM(p.avg_entry_price)}</div></div><div><div class="mob-cell-label">Qty</div><div class="mob-cell-val">${fmt(p.qty,c?6:4)}</div></div></div></div>`;}
+function posRow(p){const c=p.asset_class==='crypto',pc=cls(p.unrealized_plpc);return `<tr style="border-left:3px solid ${p.unrealized_plpc>=0?'var(--green)':'var(--red)'}"><td style="font-size:15px;font-weight:700">${symLink(p.symbol,p.asset_class)}</td><td><span class="badge ${c?'b-crypto':'b-stock'}">${c?'crypto':'stock'}</span></td><td style="font-size:14px">${fmt(p.qty,c?6:4)}</td><td class="tip" style="font-size:14px">${fmtM(p.avg_entry_price)}<span class="tiptext">Entry price</span></td><td class="tip" style="font-size:14px">${fmtM(p.current_price)}<span class="tiptext">Last price</span></td><td style="font-size:14px">${fmtM(p.market_value)}</td><td class="${pc} tip" style="font-size:16px;font-weight:700">${fmtPL(p.unrealized_pl)} <span class="muted" style="font-size:12px;font-weight:400">(${fmtP(p.unrealized_plpc)})</span><span class="tiptext">Unrealized P/L</span></td></tr>`;}
+function posCard(p){const c=p.asset_class==='crypto',pc=cls(p.unrealized_plpc),accent=p.unrealized_plpc>=0?'pos-green':'pos-red';return `<div class="pos-card ${accent}"><div class="mob-row"><div style="font-size:18px">${symLink(p.symbol,p.asset_class)} <span class="badge ${c?'b-crypto':'b-stock'}">${c?'crypto':'stock'}</span></div><div class="${pc} pos-pl-big">${fmtP(p.unrealized_plpc)}</div></div><div class="mob-grid"><div><div class="mob-cell-label">Value</div><div class="mob-cell-val">${fmtM(p.market_value)}</div></div><div><div class="mob-cell-label">P/L</div><div class="mob-cell-val ${pc}">${fmtPL(p.unrealized_pl)}</div></div><div><div class="mob-cell-label">Entry</div><div class="mob-cell-val">${fmtM(p.avg_entry_price)}</div></div><div><div class="mob-cell-label">Qty</div><div class="mob-cell-val">${fmt(p.qty,c?6:4)}</div></div></div></div>`;}
 function closeReasonBadge(reason){
   if(!reason) return '';
   const r=reason.toLowerCase();
@@ -414,7 +414,7 @@ function render(d){
       </div>
     </div>
     <div class="section-primary"><span class="live-dot"></span>Open Positions</div>
-    ${d.positions.length===0?'<div class="mob-card"><p class="empty">No open positions</p></div>':`<div class="tbl-wrap desktop-table" style="border-color:#1e3a2a""><table><thead><tr><th>Symbol</th><th>Type</th><th>Qty</th><th>Entry</th><th>Current</th><th>Value</th><th>P/L</th></tr></thead><tbody>${d.positions.map(posRow).join('')}</tbody></table></div><div class="mobile-cards">${d.positions.map(posCard).join('')}</div>`}
+    ${d.positions.length===0?'<div class="mob-card"><p class="empty">No open positions</p></div>':`<div class="tbl-wrap pos-tbl desktop-table" style="border-color:#1e3a2a"><table><thead><tr><th>Symbol</th><th>Type</th><th>Qty</th><th>Entry</th><th>Current</th><th>Value</th><th>P/L</th></tr></thead><tbody>${d.positions.map(posRow).join('')}</tbody></table></div><div class="mobile-cards">${d.positions.map(posCard).join('')}</div>`}
     <div class="section">Recent Trades</div>
     ${d.recent_orders.length===0?'<div class="mob-card"><p class="empty">No recent trades</p></div>':`<div class="tbl-wrap desktop-table"><table><thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Avg Price</th><th>P/L</th><th>Status</th><th>Date</th></tr></thead><tbody>${d.recent_orders.map(ordRow).join('')}</tbody></table></div><div class="mobile-cards">${d.recent_orders.map(ordCard).join('')}</div>`}
     <div class="section">Inverse Cramer Score — Correlation Tracker</div>
