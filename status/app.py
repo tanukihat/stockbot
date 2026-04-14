@@ -393,7 +393,7 @@ function render(d){
         <select id="chart-range" onchange="setChartRange(this.value)" style="-webkit-appearance:none;-moz-appearance:none;appearance:none;background:var(--bg);color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;font-family:var(--mono);cursor:pointer;outline:none;touch-action:manipulation;">
           <option value="0">All Time</option>
           <option value="180">6 Months</option>
-          <option value="30">30 Days</option>
+          <option value="30" selected>30 Days</option>
           <option value="7">1 Week</option>
         </select>
       </div>
