@@ -1,6 +1,7 @@
 # Environment & secrets
 .env
 *.env
+status/.env
 
 # Database & state
 data/stockbot.db

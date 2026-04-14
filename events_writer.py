@@ -15,8 +15,8 @@ import urllib.request
 
 logger = logging.getLogger(__name__)
 
-EVENTS_URL    = "https://eroticjesusfeet.com/stockbot/api/event"
-EVENT_SECRET  = "cd4c5484b99c1022bcb4d12c43e0c8cb0ffe6069008393bcd61dabad148b4b91"
+EVENTS_URL    = os.getenv("STATUS_PAGE_URL", "")  # e.g. https://yourdomain.com/stockbot/api/event
+EVENT_SECRET  = os.getenv("STATUS_PAGE_SECRET", "")
 MILESTONE_STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "milestone_state.json")
 
 # Percentage milestones to celebrate

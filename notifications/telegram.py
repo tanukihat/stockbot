@@ -144,7 +144,8 @@ def notify_trade_opened(trade: dict):
     send(msg, urgent=True)
 
 
-_ICS_PUSH_URL = "https://eroticjesusfeet.com/stockbot/api/ics-record"
+import os as _os
+_ICS_PUSH_URL = _os.getenv("STATUS_PAGE_URL", "").replace("/api/event", "/api/ics-record")
 
 def _push_ics_to_dashboard(symbol: str, pnl_pct: float, ics_data: dict):
     """Push ICS record to the VPS status dashboard for correlation tracking."""
