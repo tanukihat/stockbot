@@ -148,10 +148,20 @@ def notify_trade_closed(symbol, action, pnl, pnl_pct, reason, exit_price=None):
         emoji = "🛑" if "stop" in reason.lower() else "❌"
 
     price_str = f" @ ${exit_price:.2f}" if exit_price else ""
+
+    # Inverse Cramer Score — fetch async-style (best effort, don't block the close)
+    ics_line = ""
+    try:
+        from sentiment.cramer import format_ics_for_telegram
+        ics_line = format_ics_for_telegram(symbol, pnl_pct)
+    except Exception as _e:
+        logger.debug(f"ICS lookup skipped for {symbol}: {_e}")
+
     msg = (
         f"{emoji} <b>CLOSED: {symbol}</b>\n"
         f"P&L: <b>{'+' if pnl >= 0 else ''}{pnl:.2f} ({pnl_pct*100:+.1f}%)</b>\n"
         f"Reason: {reason}{price_str}"
+        + (f"\n{ics_line}" if ics_line else "")
     )
     send(msg, urgent=True, dedup_key=f"closed:{symbol}:{reason[:20]}")
 
