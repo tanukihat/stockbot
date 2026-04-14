@@ -4,6 +4,8 @@ A fully autonomous, sentiment-driven trading bot that uses Claude AI to analyze 
 
 **Currently paper trading. Use real money at your own risk.**
 
+> ⚠️ **DISCLAIMER:** This project is for educational and entertainment purposes only. It is **NOT financial advice**. By using this software, you acknowledge that you assume **full liability** for any and all outcomes, including financial losses. The authors and contributors make no representations or warranties of any kind regarding accuracy, performance, or fitness for any particular purpose. Past performance of the bot does not guarantee future results. **Do your own research. Never trade with money you can't afford to lose.**
+
 ---
 
 ## How It Works
