@@ -141,6 +141,32 @@ def notify_trade_opened(trade: dict):
     send(msg, urgent=True)
 
 
+_ICS_PUSH_URL = "https://eroticjesusfeet.com/stockbot/api/ics-record"
+_ICS_SECRET = "cd4c5484b99c1022bcb4d12c43e0c8cb0ffe6069008393bcd61dabad148b4b91"
+
+def _push_ics_to_dashboard(symbol: str, pnl_pct: float, ics_data: dict):
+    """Push ICS record to the VPS status dashboard for correlation tracking."""
+    try:
+        payload = {
+            "symbol": symbol,
+            "close_time": datetime.now(_ET).isoformat(),
+            "pnl_pct": pnl_pct,
+            "ics": ics_data.get("ics"),
+            "cramer_action": ics_data.get("cramer_action"),
+            "cramer_sentiment": ics_data.get("cramer_sentiment"),
+        }
+        r = requests.post(
+            _ICS_PUSH_URL,
+            json=payload,
+            headers={"X-Event-Secret": _ICS_SECRET},
+            timeout=8,
+        )
+        r.raise_for_status()
+        logger.debug(f"ICS pushed to dashboard for {symbol}")
+    except Exception as e:
+        logger.debug(f"ICS dashboard push failed for {symbol}: {e}")
+
+
 def notify_trade_closed(symbol, action, pnl, pnl_pct, reason, exit_price=None):
     if pnl >= 0:
         emoji = "💰" if pnl_pct >= 0.05 else "✅"
@@ -152,7 +178,11 @@ def notify_trade_closed(symbol, action, pnl, pnl_pct, reason, exit_price=None):
     # Inverse Cramer Score — fetch async-style (best effort, don't block the close)
     ics_line = ""
     try:
-        from sentiment.cramer import format_ics_for_telegram
+        from sentiment.cramer import compute_ics, format_ics_for_telegram
+        from data.db import store_ics
+        ics_data = compute_ics(symbol)
+        store_ics(symbol, ics_data)  # persist locally
+        _push_ics_to_dashboard(symbol, pnl_pct, ics_data)  # push to VPS dashboard
         ics_line = format_ics_for_telegram(symbol, pnl_pct)
     except Exception as _e:
         logger.debug(f"ICS lookup skipped for {symbol}: {_e}")

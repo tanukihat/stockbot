@@ -65,13 +65,14 @@ def init_db():
             notes TEXT
         );
     """)
-    # Migrate existing DBs — add peak_pnl_pct if it doesn't exist yet
-    try:
-        conn.execute("ALTER TABLE position_log ADD COLUMN peak_pnl_pct REAL")
-        conn.commit()
-        logger.info("Migrated position_log: added peak_pnl_pct column")
-    except Exception:
-        pass  # Column already exists, fine
+    # Migrate existing DBs — add columns if they don't exist yet
+    for col, typedef in [("peak_pnl_pct", "REAL"), ("ics", "REAL"), ("cramer_action", "TEXT"), ("cramer_sentiment", "TEXT")]:
+        try:
+            conn.execute(f"ALTER TABLE position_log ADD COLUMN {col} {typedef}")
+            conn.commit()
+            logger.info(f"Migrated position_log: added {col} column")
+        except Exception:
+            pass  # Column already exists, fine
 
     conn.commit()
     conn.close()
@@ -109,6 +110,43 @@ def open_position(symbol, asset_class, entry_price, notional):
     """, (symbol, asset_class, datetime.now(timezone.utc).isoformat(), entry_price, notional))
     conn.commit()
     conn.close()
+
+
+def store_ics(symbol, ics_data: dict):
+    """Store ICS result against the most recent open position for this symbol."""
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+        UPDATE position_log
+        SET ics = ?, cramer_action = ?, cramer_sentiment = ?
+        WHERE id = (
+            SELECT id FROM position_log
+            WHERE symbol = ? AND status = 'open'
+            ORDER BY open_time DESC LIMIT 1
+        )
+    """, (
+        ics_data.get("ics"),
+        ics_data.get("cramer_action"),
+        ics_data.get("cramer_sentiment"),
+        symbol,
+    ))
+    conn.commit()
+    conn.close()
+
+
+def get_ics_history(limit=100):
+    """Return closed positions that have ICS data, for correlation charting."""
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+        SELECT symbol, close_time, pnl_pct, ics, cramer_action, cramer_sentiment
+        FROM position_log
+        WHERE status = 'closed' AND ics IS NOT NULL
+        ORDER BY close_time DESC LIMIT ?
+    """, (limit,))
+    rows = c.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 def close_position_db(symbol, exit_price, pnl, pnl_pct):
