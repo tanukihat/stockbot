@@ -66,7 +66,7 @@ def init_db():
         );
     """)
     # Migrate existing DBs — add columns if they don't exist yet
-    for col, typedef in [("peak_pnl_pct", "REAL"), ("ics", "REAL"), ("cramer_action", "TEXT"), ("cramer_sentiment", "TEXT")]:
+    for col, typedef in [("peak_pnl_pct", "REAL"), ("ics", "REAL"), ("cramer_action", "TEXT"), ("cramer_sentiment", "TEXT"), ("cramer_call_time", "TEXT")]:
         try:
             conn.execute(f"ALTER TABLE position_log ADD COLUMN {col} {typedef}")
             conn.commit()
@@ -114,11 +114,18 @@ def open_position(symbol, asset_class, entry_price, notional):
 
 def store_ics(symbol, ics_data: dict):
     """Store ICS result against the most recent open position for this symbol."""
+    from datetime import datetime, timezone
+    # Convert fetched_at epoch to ISO string for cramer_call_time
+    fetched_at = ics_data.get("fetched_at")
+    cramer_call_time = (
+        datetime.fromtimestamp(fetched_at, tz=timezone.utc).isoformat()
+        if fetched_at else None
+    )
     conn = get_conn()
     c = conn.cursor()
     c.execute("""
         UPDATE position_log
-        SET ics = ?, cramer_action = ?, cramer_sentiment = ?
+        SET ics = ?, cramer_action = ?, cramer_sentiment = ?, cramer_call_time = ?
         WHERE id = (
             SELECT id FROM position_log
             WHERE symbol = ? AND status = 'open'
@@ -128,6 +135,7 @@ def store_ics(symbol, ics_data: dict):
         ics_data.get("ics"),
         ics_data.get("cramer_action"),
         ics_data.get("cramer_sentiment"),
+        cramer_call_time,
         symbol,
     ))
     conn.commit()
@@ -139,7 +147,7 @@ def get_ics_history(limit=100):
     conn = get_conn()
     c = conn.cursor()
     c.execute("""
-        SELECT symbol, close_time, pnl_pct, ics, cramer_action, cramer_sentiment
+        SELECT symbol, close_time, pnl_pct, ics, cramer_action, cramer_sentiment, cramer_call_time
         FROM position_log
         WHERE status = 'closed' AND ics IS NOT NULL
         ORDER BY close_time DESC LIMIT ?
@@ -235,6 +243,42 @@ def get_open_position_age(symbol):
     if open_time.tzinfo is None:
         open_time = open_time.replace(tzinfo=timezone.utc)
     return (now - open_time).total_seconds() / 3600
+
+
+def get_ics_for_symbol(symbol):
+    """
+    Return ICS data for an open position, including cramer_call_time.
+    Used by future signal logic to check 24h lag before acting on ICS.
+    Returns None if no open position or no ICS data yet.
+    """
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+        SELECT ics, cramer_action, cramer_sentiment, cramer_call_time
+        FROM position_log
+        WHERE symbol = ? AND status = 'open'
+        ORDER BY open_time DESC LIMIT 1
+    """, (symbol,))
+    row = c.fetchone()
+    conn.close()
+    if not row or row["ics"] is None:
+        return None
+    return dict(row)
+
+
+def is_cramer_lag_cleared(symbol, lag_hours=24):
+    """
+    Returns True if Cramer's call was recorded >= lag_hours ago.
+    Use this gate before acting on ICS as a buy/sell signal.
+    """
+    data = get_ics_for_symbol(symbol)
+    if not data or not data.get("cramer_call_time"):
+        return False
+    call_time = datetime.fromisoformat(data["cramer_call_time"])
+    if call_time.tzinfo is None:
+        call_time = call_time.replace(tzinfo=timezone.utc)
+    hours_elapsed = (datetime.now(timezone.utc) - call_time).total_seconds() / 3600
+    return hours_elapsed >= lag_hours
 
 
 def log_scan(symbols_scanned, signals_generated, trades_executed, notes=""):
